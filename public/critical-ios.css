@@ -1,0 +1,208 @@
+/* ====================================================
+   CRITICAL iOS FIXES - NON MODIFICARE
+   Questo file contiene fix essenziali per Safari/iOS.
+   Viene importato DOPO style.css per override garantito.
+   ==================================================== */
+
+/* ====================================================
+   SAFE AREA (dispositivi con notch)
+   ==================================================== */
+body {
+  padding-top: env(safe-area-inset-top, 0) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0) !important;
+  padding-left: max(env(safe-area-inset-left, 0px), 12px) !important;
+  padding-right: max(env(safe-area-inset-right, 0px), 12px) !important;
+}
+
+/* ====================================================
+   INPUT FONT-SIZE (previene auto-zoom iOS)
+   ==================================================== */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+@media (min-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 14px !important;
+  }
+}
+
+/* ====================================================
+   SCROLL MOMENTUM iOS
+   ==================================================== */
+#appointmentsList,
+#clientsList,
+#vehiclesList {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ====================================================
+   MODAL iOS KEYBOARD FIX
+   ==================================================== */
+.modal {
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content {
+  padding-bottom: 80px;
+}
+
+@media (max-width: 767px) {
+  .modal-content {
+    padding-bottom: 100px;
+  }
+  
+  #stepClientActions,
+  #stepActions {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+}
+
+/* ====================================================
+   PHONE ROW - Layout telefono (30%/70%)
+   ==================================================== */
+.phone-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 350px;
+  gap: 8px;
+}
+
+.phone-row select {
+  flex: 0 0 30% !important;
+  width: 30% !important;
+  min-width: 80px !important;
+  max-width: 110px !important;
+}
+
+.phone-row input {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+/* Modal phone row override */
+.modal .phone-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+}
+
+.modal .phone-row > * + * {
+  margin-left: 8px;
+}
+
+.modal .phone-row select {
+  flex: 0 0 25%;
+  min-width: 60px;
+}
+
+.modal .phone-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ====================================================
+   FIELD ERROR - Validazione errori
+   ==================================================== */
+.field-error {
+  border: 2px solid var(--danger, #F15B5B) !important;
+  background-color: rgba(241, 91, 91, 0.1) !important;
+}
+
+.field-error:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(241, 91, 91, 0.25);
+}
+
+/* ====================================================
+   DATE ROW - Layout date
+   ==================================================== */
+.date-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.date-row label {
+  flex: 0 0 100%;
+  margin-bottom: 4px;
+}
+
+.date-row input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.date-row .separator {
+  flex: 0 0 auto;
+  padding: 0 4px;
+}
+
+@media (min-width: 768px) {
+  .date-row label {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    min-width: 100px;
+  }
+
+  .date-row input {
+    min-width: 180px;
+  }
+}
+
+/* ====================================================
+   VEHICLE CARD - Card veicolo
+   ==================================================== */
+.vehicle-card {
+  border: 1px solid var(--border-strong, rgba(255,255,255,.14));
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: var(--radius, 14px);
+  background: var(--surface-2, #161C24);
+}
+
+.vehicle-card-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text, #E7E9EE);
+}
+
+.vehicle-card-title span {
+  font-weight: normal;
+  color: var(--text-muted, #AAB2C0);
+}
+
+.vehicle-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9em;
+  color: var(--text-muted, #AAB2C0);
+}
+
+@media (min-width: 768px) {
+  .vehicle-card-details {
+    flex-direction: row;
+    gap: 16px;
+  }
+}
+
+/* ====================================================
+   N° TELAIO NO-WRAP
+   ==================================================== */
+label[for="filterChassis"],
+label[for="searchChassis"] {
+  white-space: nowrap;
+}

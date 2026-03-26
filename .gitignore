@@ -104,3 +104,17 @@ dist
 
 # Dataconnect
 .dataconnect
+
+# Local artifacts and reports
+playwright-report/
+test-results/
+firestore-debug.log
+desktop.ini
+**/desktop.ini
+
+# Sensitive files
+**/service-account.json
+**/service-account*.json
+*.pem
+*.key
+*.p12

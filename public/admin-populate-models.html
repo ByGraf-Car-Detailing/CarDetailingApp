@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Popola vehicleModels</title>
+</head>
+<body>
+  <h2>Popola collezione vehicleModels</h2>
+  <p>Scarica tutti i modelli per ogni marca attiva in Firestore.</p>
+  <button id="startBtn">▶️ Avvia popolamento</button>
+  <pre id="log" style="background:#222;color:#0f0;padding:15px;height:500px;overflow:auto;"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrBjfxtshgBskV4KOaUc3lO6VI0ATNG88",
+      authDomain: "cardetailingapp-e6c95.firebaseapp.com",
+      projectId: "cardetailingapp-e6c95",
+      storageBucket: "cardetailingapp-e6c95.firebasestorage.app",
+      messagingSenderId: "1066766431776",
+      appId: "1:1066766431776:web:80b9d02818baaaef052e45"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const log = document.getElementById("log");
+
+    function print(msg) {
+      log.textContent += msg + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      document.getElementById("startBtn").disabled = true;
+      log.textContent = "";
+
+      try {
+        // 1. Carica marche attive
+        print("📥 Caricamento marche attive da Firestore...");
+        const makesSnap = await getDocs(query(collection(db, "vehicleMakes"), where("active", "==", true)));
+        const makes = [];
+        makesSnap.forEach(d => {
+          if (d.data().name) makes.push(d.data().name);
+        });
+        print(`✅ Trovate ${makes.length} marche attive`);
+
+        // 2. Carica modelli esistenti per evitare duplicati
+        print("🔍 Caricamento modelli esistenti...");
+        const existingSnap = await getDocs(collection(db, "vehicleModels"));
+        const existingSet = new Set();
+        existingSnap.forEach(d => {
+          const data = d.data();
+          existingSet.add(`${data.make?.toUpperCase()}|${data.name?.toUpperCase()}`);
+        });
+        print(`📋 Modelli già presenti: ${existingSet.size}`);
+
+        let totalAdded = 0;
+        let totalSkipped = 0;
+
+        // 3. Per ogni marca, scarica modelli da API
+        for (let i = 0; i < makes.length; i++) {
+          const make = makes[i];
+          print(`\n🚗 [${i+1}/${makes.length}] ${make}...`);
+
+          try {
+            const url = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`;
+            const resp = await fetch(url);
+            
+            if (!resp.ok) {
+              print(`   ⚠️ API error per ${make}`);
+              continue;
+            }
+
+            const data = await resp.json();
+            if (!Array.isArray(data.Results)) {
+              print(`   ⚠️ Nessun risultato per ${make}`);
+              continue;
+            }
+
+            const models = data.Results.map(m => m.Model_Name).filter(Boolean);
+            let added = 0;
+            let skipped = 0;
+
+            for (const modelName of models) {
+              const key = `${make.toUpperCase()}|${modelName.toUpperCase()}`;
+              if (existingSet.has(key)) {
+                skipped++;
+                continue;
+              }
+
+              const docId = `${make.toUpperCase()}_${modelName.toUpperCase()}`.replace(/[^A-Z0-9]/g, "_").substring(0, 100);
+              await setDoc(doc(db, "vehicleModels", docId), {
+                make: make,
+                name: modelName,
+                source: "api",
+                addedAt: new Date().toISOString()
+              });
+              
+              existingSet.add(key);
+              added++;
+            }
+
+            print(`   ✅ Aggiunti: ${added}, Saltati: ${skipped}`);
+            totalAdded += added;
+            totalSkipped += skipped;
+
+            // Pausa per non sovraccaricare API
+            await new Promise(r => setTimeout(r, 300));
+
+          } catch (err) {
+            print(`   ❌ Errore ${make}: ${err.message}`);
+          }
+        }
+
+        print(`\n========================================`);
+        print(`✅ COMPLETATO!`);
+        print(`   Totale aggiunti: ${totalAdded}`);
+        print(`   Totale saltati: ${totalSkipped}`);
+
+      } catch (err) {
+        print("❌ Errore: " + err.message);
+      }
+
+      document.getElementById("startBtn").disabled = false;
+    });
+  </script>
+</body>
+</html>

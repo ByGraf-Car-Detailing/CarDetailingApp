@@ -1,0 +1,36 @@
+﻿{
+    "name":  "cardetailingapp",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "devDependencies":  {
+                            "@playwright/test":  "^1.58.1",
+                            "@types/node":  "^25.2.0",
+                            "firebase-admin":  "^13.6.0",
+                            "firebase-tools":  "^15.5.1",
+                            "http-server":  "^14.1.1",
+                            "vitest":  "^4.0.18"
+                        },
+    "scripts":  {
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
+                    "serve":  "http-server public -p 4173 -c-1",
+                    "test:e2e":  "playwright test",
+                    "test:emu":  "firebase emulators:exec --only auth,firestore,hosting \"node scripts/seed-emulators.mjs \u0026\u0026 npx playwright test\"",
+                    "secrets:scan": "node scripts/scan-secrets.mjs",
+                    "ci:baseline": "npm run secrets:scan \u0026\u0026 npm run test:emu"
+                },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/ByGraf-Car-Detailing/CarDetailingApp.git"
+                   },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "type":  "commonjs",
+    "bugs":  {
+                 "url":  "https://github.com/ByGraf-Car-Detailing/CarDetailingApp/issues"
+             },
+    "homepage":  "https://github.com/ByGraf-Car-Detailing/CarDetailingApp#readme"
+}

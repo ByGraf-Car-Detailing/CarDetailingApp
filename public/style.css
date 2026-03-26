@@ -1,0 +1,998 @@
+/* ====================================================
+   CAR DETAILING APP - PREMIUM DARK THEME
+   Luxury detailing aesthetic
+   ==================================================== */
+
+/* ====================================================
+   DESIGN TOKENS
+   ==================================================== */
+:root {
+  /* Backgrounds */
+  --bg: #0B0D10;
+  --surface: #11151B;
+  --surface-2: #161C24;
+  --surface-3: #1B2230;
+  
+  /* Borders */
+  --border: rgba(255,255,255,.08);
+  --border-strong: rgba(255,255,255,.14);
+  
+  /* Text */
+  --text: #E7E9EE;
+  --text-muted: #AAB2C0;
+  --text-faint: rgba(231,233,238,.72);
+  
+  /* Accent colors */
+  --gold: #C8A25A;
+  --gold-2: #D7B86C;
+  --danger: #F15B5B;
+  --success: #41C07A;
+  --warning: #F2C94C;
+  --info: #4AA3FF;
+  
+  /* Radius */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  
+  /* Shadows */
+  --shadow-1: 0 8px 24px rgba(0,0,0,.45);
+  --shadow-2: 0 14px 40px rgba(0,0,0,.55);
+  
+  /* Spacing */
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 24px;
+  --space-6: 32px;
+  
+  /* Focus rings */
+  --ring: 0 0 0 3px rgba(200,162,90,.35);
+  --ring-danger: 0 0 0 3px rgba(241,91,91,.25);
+}
+
+/* ====================================================
+   FONT IMPORT
+   ==================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ====================================================
+   RESET & BASE
+   ==================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(200,162,90,0.03) 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, #080A0D 100%);
+  min-height: 100vh;
+}
+
+/* ====================================================
+   TYPOGRAPHY
+   ==================================================== */
+h1, h2, h3, h4 {
+  margin: 0 0 var(--space-3) 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 650;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+p {
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-muted);
+}
+
+/* ====================================================
+   LINKS
+   ==================================================== */
+a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--gold-2);
+  text-decoration: underline;
+}
+
+/* ====================================================
+   LAYOUT - CARDS & SECTIONS
+   ==================================================== */
+section,
+#loginContainer,
+#dashboardContainer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-5);
+  max-width: 1100px;
+  margin: var(--space-4) auto;
+}
+
+@media (max-width: 767px) {
+  section,
+  #loginContainer,
+  #dashboardContainer {
+    padding: var(--space-3);
+    margin: var(--space-2) auto;
+    border-radius: var(--radius);
+  }
+}
+
+/* ====================================================
+   BUTTONS
+   ==================================================== */
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--surface-3);
+  border-color: rgba(255,255,255,.2);
+}
+
+button:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+button:disabled,
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn--primary,
+button[type="submit"] {
+  background: var(--gold);
+  color: #0B0D10;
+  border-color: transparent;
+}
+
+.btn--primary:hover,
+button[type="submit"]:hover {
+  background: var(--gold-2);
+}
+
+/* Ghost Button */
+.btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+}
+
+.btn--ghost:hover {
+  background: rgba(255,255,255,.04);
+}
+
+/* Danger Button */
+.btn--danger {
+  background: rgba(241,91,91,.14);
+  border-color: rgba(241,91,91,.35);
+  color: #FFD7D7;
+}
+
+.btn--danger:hover {
+  background: rgba(241,91,91,.22);
+}
+
+/* Icon Button */
+.btn--icon {
+  min-width: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+/* ====================================================
+   FORM ELEMENTS
+   ==================================================== */
+label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-weight: 550;
+  font-size: 13px;
+}
+
+input,
+select,
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 350px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(200,162,90,.55);
+  box-shadow: var(--ring);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+input[readonly],
+textarea[readonly] {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+  display: inline;
+  width: auto;
+  margin-right: 8px;
+  accent-color: var(--gold);
+}
+
+/* Select */
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23AAB2C0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+select option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Textarea */
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ====================================================
+   FIELDSET & PANELS
+   ==================================================== */
+fieldset {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: 0 0 var(--space-4) 0;
+}
+
+fieldset legend {
+  font-weight: 650;
+  color: var(--text);
+  padding: 0 8px;
+}
+
+fieldset label {
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+fieldset input,
+fieldset select {
+  max-width: 300px;
+  margin-bottom: 8px;
+}
+
+/* ====================================================
+   FORM ACTIONS
+   ==================================================== */
+.form-actions,
+#stepActions,
+#stepClientActions,
+#stepActionsAppointment {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+/* ====================================================
+   FORM MESSAGES
+   ==================================================== */
+.form-msg,
+#clientFormMsg,
+#vehicleFormMsg,
+#appointmentFormMsg,
+#editMsg {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.form-msg--error {
+  background: rgba(241,91,91,.1);
+  border: 1px solid rgba(241,91,91,.3);
+  color: #FFD7D7;
+}
+
+.form-msg--success {
+  background: rgba(65,192,122,.1);
+  border: 1px solid rgba(65,192,122,.3);
+  color: #CFF7DD;
+}
+
+/* ====================================================
+   TABLES
+   ==================================================== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+thead {
+  background: rgba(255,255,255,.04);
+}
+
+th {
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 650;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover td {
+  background: rgba(255,255,255,.02);
+}
+
+/* Table action buttons */
+td button {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+td button + button {
+  margin-left: 6px;
+}
+
+/* Actions column */
+th.actions-column,
+td.actions-column {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* ====================================================
+   BADGES
+   ==================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+}
+
+/* Status badges - Active/Inactive */
+.badge[data-active="true"] {
+  background: rgba(65,192,122,.12);
+  border-color: rgba(65,192,122,.35);
+  color: #7EEAA8;
+}
+
+.badge[data-active="false"] {
+  background: rgba(241,91,91,.12);
+  border-color: rgba(241,91,91,.35);
+  color: #FF9B9B;
+}
+
+/* Status badges - Appointments */
+.badge[data-status="programmato"] {
+  background: rgba(170,178,192,.12);
+  border-color: rgba(170,178,192,.35);
+  color: var(--text-muted);
+}
+
+.badge[data-status="ricezione"] {
+  background: rgba(74,163,255,.12);
+  border-color: rgba(74,163,255,.35);
+  color: #7DBFFF;
+}
+
+.badge[data-status="attesa"] {
+  background: rgba(156,107,211,.12);
+  border-color: rgba(156,107,211,.35);
+  color: #C9A8F0;
+}
+
+.badge[data-status="lavorazione"] {
+  background: rgba(242,201,76,.12);
+  border-color: rgba(242,201,76,.35);
+  color: #FFE082;
+}
+
+.badge[data-status="pronto"] {
+  background: rgba(65,192,122,.12);
+  border-color: rgba(65,192,122,.35);
+  color: #7EEAA8;
+}
+
+.badge[data-status="in consegna"] {
+  background: rgba(74,163,255,.12);
+  border-color: rgba(74,163,255,.35);
+  color: #7DBFFF;
+}
+
+.badge[data-status="concluso"] {
+  background: rgba(170,178,192,.12);
+  border-color: rgba(170,178,192,.35);
+  color: var(--text-muted);
+}
+
+.badge[data-status="fatturato"] {
+  background: rgba(0,150,136,.12);
+  border-color: rgba(0,150,136,.35);
+  color: #64FFDA;
+}
+
+.badge[data-status="pagato"] {
+  background: rgba(200,162,90,.12);
+  border-color: rgba(200,162,90,.35);
+  color: var(--gold-2);
+}
+
+/* ====================================================
+   BANNERS
+   ==================================================== */
+.banner {
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin: 12px auto;
+  max-width: 1100px;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.banner--warning,
+#alertBanner {
+  background: rgba(242,201,76,.10);
+  border-color: rgba(242,201,76,.35);
+  color: #FFEFC2;
+}
+
+.banner--error,
+#jsErrorBanner {
+  background: rgba(241,91,91,.12);
+  border-color: rgba(241,91,91,.35);
+  color: #FFD7D7;
+}
+
+/* ====================================================
+   MODAL
+   ==================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 18px 12px;
+  z-index: 9999;
+  overflow-y: auto;
+}
+
+.modal {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-5);
+  position: relative;
+  margin: 0 auto;
+}
+
+.modal__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text);
+  padding-right: 40px;
+}
+
+.modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal__close:hover {
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+/* Modal form elements */
+.modal label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin-top: 4px;
+}
+
+.modal select {
+  max-width: 100%;
+}
+
+/* ====================================================
+   DASHBOARD
+   ==================================================== */
+#dashboardContainer {
+  text-align: center;
+}
+
+#roleButtons {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 16px !important;
+  justify-content: center;
+  margin: var(--space-5) 0;
+}
+
+#roleButtons button {
+  min-width: 180px;
+}
+
+@media (max-width: 767px) {
+  #roleButtons {
+    flex-direction: column;
+    gap: 16px !important;
+    padding: 0 16px;
+  }
+  
+  #roleButtons button {
+    width: 100%;
+    min-width: unset;
+    min-height: 52px;
+  }
+}
+
+#logoutBtn {
+  margin-top: var(--space-4);
+}
+
+#welcomeMsg {
+  font-size: 15px;
+}
+
+/* ====================================================
+   LOGIN
+   ==================================================== */
+#loginContainer {
+  text-align: center;
+  max-width: 450px;
+  margin-top: 60px;
+}
+
+#loginContainer h1 {
+  margin-bottom: var(--space-2);
+}
+
+#loginContainer p {
+  margin-bottom: var(--space-5);
+}
+
+#loginBtn {
+  background: var(--gold);
+  color: #0B0D10;
+  border-color: transparent;
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+}
+
+#loginBtn:hover {
+  background: var(--gold-2);
+}
+
+/* ====================================================
+   NAVIGATION BUTTONS (Back to...)
+   ==================================================== */
+section > button:first-of-type,
+form > div:first-child button {
+  margin-bottom: var(--space-3);
+}
+
+/* ====================================================
+   TOOLBAR (multiple buttons row)
+   ==================================================== */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+/* ====================================================
+   UTILITIES
+   ==================================================== */
+.hidden {
+  display: none !important;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+/* ====================================================
+   DATE PICKER MAX WIDTH (Desktop)
+   ==================================================== */
+@media (min-width: 768px) {
+  input[type="date"],
+  input[type="datetime-local"] {
+    max-width: 220px;
+  }
+}
+
+/* ====================================================
+   DATE/TIME PICKER DARK THEME
+   ==================================================== */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Date picker icon colore */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+/* ====================================================
+   DATE ROW - Layout date pairs
+   ==================================================== */
+.date-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.date-row label {
+  flex: 0 0 100%;
+  margin-bottom: 4px;
+}
+
+.date-row input {
+  flex: 1;
+  min-width: 140px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.date-row .separator {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* Desktop: label su riga propria, input affiancati sotto */
+@media (min-width: 768px) {
+  .date-row {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  .date-row label {
+    flex: 0 0 100% !important;
+  }
+
+  .date-row input {
+    flex: 1 1 auto;
+    max-width: 220px;
+  }
+
+  .date-row .separator {
+    display: inline !important;
+  }
+}
+
+/* Mobile: stack verticalmente senza separatore */
+@media (max-width: 767px) {
+  .date-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 24px !important;
+  }
+
+  .date-row input {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    padding: 0 12px !important;
+    text-align: center !important;
+    line-height: 52px !important;
+    height: 52px !important;
+    box-sizing: border-box !important;
+  }
+
+  .date-row input[type="datetime-local"],
+  .date-row input[type="date"],
+  .date-row input[type="time"] {
+    text-align: center !important;
+    line-height: 52px !important;
+    height: 52px !important;
+    padding: 0 12px !important;
+  }
+
+  .date-row .separator {
+    display: none !important;
+  }
+}
+
+/* ====================================================
+   INLINE ADD BUTTONS (Aggiungi Cliente/Veicolo)
+   ==================================================== */
+.inline-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  margin-left: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--gold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inline-add-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--gold);
+}
+
+@media (max-width: 767px) {
+  .inline-add-btn {
+    display: block;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
+    text-align: center;
+    padding: 10px;
+  }
+}
+
+/* ====================================================
+   MOBILE TABLE OPTIMIZATIONS
+   ==================================================== */
+@media (max-width: 767px) {
+  /* Nascondi colonna email su mobile */
+  .hide-mobile,
+  .show-desktop {
+    display: none !important;
+  }
+  
+  .show-mobile {
+    display: inline !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .show-mobile {
+    display: none !important;
+  }
+  
+  .show-desktop {
+    display: inline !important;
+  }
+}
+
+/* Badge abbreviati mobile */
+.badge--active-short {
+  background: var(--success);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.badge--inactive-short {
+  background: var(--danger);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* View button (lente) */
+.btn--view {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+
+.btn--view:hover {
+  background: var(--surface-2);
+  border-color: var(--gold);
+}
+
+@media (min-width: 768px) {
+  .btn--view {
+    opacity: 0.7;
+  }
+  
+  .btn--view:hover {
+    opacity: 1;
+  }
+}
+
+/* ====================================================
+   CLIENT VIEW MODAL
+   ==================================================== */
+.client-view-modal {
+  padding: var(--space-2) 0;
+}
+
+.client-view-row {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.client-view-row:last-child {
+  border-bottom: none;
+}
+
+.client-view-row strong {
+  color: var(--text-muted);
+  display: inline-block;
+  min-width: 90px;
+}
+

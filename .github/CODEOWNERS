@@ -1,0 +1,5 @@
+﻿# Security/release sensitive ownership
+/firestore.rules @ByGraf-Car-Detailing/admins
+/firebase.json @ByGraf-Car-Detailing/admins
+/.firebaserc @ByGraf-Car-Detailing/admins
+/.github/workflows/* @ByGraf-Car-Detailing/admins

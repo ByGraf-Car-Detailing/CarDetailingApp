@@ -1,18 +1,380 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0D10" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/critical-ios.css">
   <title>Car Detailing App</title>
 </head>
 <body>
-  <h1>Benvenuto nella Car Detailing App</h1>
-  <p>L'app è collegata a Firebase Hosting. è sincata con gdrive</p>
 
-  <button id="loginBtn">Login con Google</button>
+  <!-- ðŸ”” BANNER AVVISI -->
+  <div id="alertBanner" class="banner banner--warning" style="display: none;">
+    âš ï¸ Alcuni clienti risultano collegati ad aziende inesistenti. Correggi questi dati in "Modifica Clienti".
+  </div>
 
+  <div id="jsErrorBanner" class="banner banner--error" style="display:none;"></div>
+
+  <!-- Contenitore Login -->
+  <div id="loginContainer">
+    <h1>Car Detailing App</h1>
+    <p>Gestionale professionale per car detailing</p>
+    <button id="loginBtn" data-testid="login-google">Login con Google</button>
+  </div>
+
+  <!-- Contenitore Dashboard -->
+  <div id="dashboardContainer" style="display: none;">
+    <h2>Dashboard</h2>
+    <p id="welcomeMsg"></p>
+    <div id="roleButtons"></div>
+    <button id="logoutBtn" class="btn btn--ghost" data-testid="logout">Logout</button>
+  </div>
+
+  <!-- ðŸ”½ FORM CLIENTE (Wizard) -->
+  <section id="clientFormSection" style="display: none;">
+    <h3>âž• Aggiungi Cliente / Azienda</h3>
+    <form id="clientForm">
+      <!-- Navigazione -->
+      <div class="toolbar">
+        <button type="button" id="backToListClientBtn" class="btn btn--ghost">â† Torna all'elenco</button>
+        <button type="button" id="backToDashboardClientBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      </div>
+
+      <!-- Step 1: Tipo cliente -->
+      <div id="stepClientType">
+        <label>Tipo Cliente:</label>
+        <select id="clientType" required>
+          <option value="">-- Seleziona --</option>
+          <option value="person">Privato</option>
+          <option value="company">Azienda</option>
+        </select>
+      </div>
+
+      <!-- Step 2: Dati anagrafici (Privato) -->
+      <div id="stepNameFields" style="display:none;">
+        <label>Nome:</label>
+        <input type="text" id="firstName" />
+        <label>Cognome:</label>
+        <input type="text" id="lastName" />
+      </div>
+
+      <!-- Step 2b: Ragione Sociale (Azienda) -->
+      <div id="stepCompanyFields" style="display:none;">
+        <label>Ragione Sociale:</label>
+        <input type="text" id="companyName" />
+      </div>
+
+      <!-- Step 3: Ditta collegata (solo Privato) -->
+      <div id="stepCompanyLink" style="display:none;">
+        <label>Ditta:</label>
+        <select id="linkedCompanyId">
+          <option value="NO">-- NO --</option>
+        </select>
+      </div>
+
+      <!-- Step 4: Email -->
+      <div id="stepEmail" style="display:none;">
+        <label>Email:</label>
+        <input type="email" id="email" required />
+      </div>
+
+      <!-- Step 5: Telefono -->
+      <div id="stepPhone" style="display:none;">
+        <label>Telefono:</label>
+        <div class="phone-row">
+          <select id="phonePrefix" required>
+            <option value="">+Prefisso</option>
+            <option value="+39">+39 (IT)</option>
+            <option value="+41">+41 (CH)</option>
+            <option value="+49">+49 (DE)</option>
+            <option value="+33">+33 (FR)</option>
+            <option value="+44">+44 (UK)</option>
+          </select>
+          <input type="tel" id="phoneNumber" required placeholder="Numero di telefono" inputmode="numeric" pattern="[0-9]*" />
+        </div>
+      </div>
+
+      <!-- Step 6: Indirizzo -->
+      <div id="stepAddress" style="display:none;">
+        <label>Via:</label>
+        <input type="text" id="street" required />
+        <label>Numero civico:</label>
+        <input type="text" id="streetNumber" required />
+        <label>CAP:</label>
+        <input type="text" id="cap" required inputmode="numeric" pattern="[0-9]*" />
+        <label>CittÃ :</label>
+        <input type="text" id="city" required />
+      </div>
+
+      <!-- Step 7: CF/P.IVA + Note -->
+      <div id="stepExtras" style="display:none;">
+        <label>Codice Fiscale / P.IVA:</label>
+        <input type="text" id="fiscalCode" />
+        <label>Note:</label>
+        <textarea id="note" rows="3"></textarea>
+      </div>
+
+      <!-- Step 8: Azioni -->
+      <div id="stepClientActions" class="form-actions" style="display:none;">
+        <button type="button" id="cancelClientBtn" class="btn btn--ghost">Annulla</button>
+        <button type="submit" id="submitBtn" class="btn btn--primary">Salva</button>
+      </div>
+
+      <div id="clientFormMsg"></div>
+    </form>
+  </section>
+
+  <!-- âœï¸ SEZIONE MODIFICA CLIENTI -->
+  <section id="clientEditSection" style="display: none;">
+    <h3>âœï¸ Modifica Cliente</h3>
+
+    <button id="backToDashboardBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+
+    <!-- âš ï¸ AVVISO CLIENTE DISATTIVATO -->
+    <div id="editWarningBanner" class="banner banner--warning" style="display: none;">
+      âš ï¸ Questo cliente Ã¨ disattivato. Non Ã¨ possibile modificare i suoi dati finchÃ© non viene riattivato.
+    </div>
+
+    <!-- ðŸ“ FORM MODIFICA CLIENTE -->
+    <form id="editClientForm" style="display: none;"></form>
+  </section>
+
+  <!-- ðŸ‘¥ SEZIONE GESTIONE CLIENTI -->
+  <section id="clientManageSection" style="display: none;">
+    <h3>ðŸ‘¥ Gestione Clienti</h3>
+    <div class="toolbar">
+      <button id="backToDashboardClientsBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      <button id="showAddClientBtn" class="btn btn--primary">âž• Aggiungi Cliente</button>
+    </div>
+
+    <fieldset>
+      <legend>Ricerca Clienti</legend>
+      <label>Nome:</label>
+      <input type="text" id="searchFirstNameManage" />
+      <label>Cognome:</label>
+      <input type="text" id="searchLastNameManage" />
+      <label>Email:</label>
+      <input type="text" id="searchEmailManage" />
+      <label>Azienda:</label>
+      <input type="text" id="searchCompanyInputManage" placeholder="Nome azienda..." />
+      <label>
+        <input type="checkbox" id="searchIncludeInactive" />
+        Includi clienti disattivati
+      </label>
+      <div class="form-actions">
+        <button type="button" id="resetClientsBtnManage" class="btn btn--ghost">Azzera Ricerca</button>
+        <button type="button" id="searchClientsBtnManage" class="btn btn--primary">Cerca</button>
+      </div>
+    </fieldset>
+
+    <div id="clientsList"></div>
+  </section>
+
+  <!-- ðŸš— SEZIONE GESTIONE VEICOLI -->
+  <section id="vehicleManageSection" style="display:none;">
+    <h3>ðŸš— Gestione Veicoli</h3>
+    <div class="toolbar">
+      <button id="backToDashboardVehiclesBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      <button id="showAddVehicleBtn" class="btn btn--primary">âž• Aggiungi Veicolo</button>
+    </div>
+    
+    <fieldset>
+      <legend>Ricerca Veicoli</legend>
+      <label>Targa:</label>
+      <input type="text" id="searchPlate" />
+      <label>Numero Telaio:</label>
+      <input type="text" id="searchChassis" />
+      <label>Proprietario:</label>
+      <input type="text" id="searchOwner" />
+      <div class="form-actions">
+        <button type="button" id="resetVehiclesBtn" class="btn btn--ghost">Azzera Ricerca</button>
+        <button type="button" id="searchVehiclesBtn" class="btn btn--primary">Cerca</button>
+      </div>
+    </fieldset>
+    
+    <div id="vehiclesList"></div>
+    <div id="vehicleFormContainer" style="display:none;"></div>
+    <div id="vehicleEditContainer" style="display:none;"></div>
+  </section>
+
+  <!-- ðŸš— SEZIONE INSERIMENTO VEICOLO -->
+  <section id="vehicleFormSection" style="display:none;">
+    <h3>âž• Aggiungi Veicolo</h3>
+    <form id="vehicleForm">
+      <div class="toolbar">
+        <button type="button" id="backToListVehicleBtn" class="btn btn--ghost">â† Torna all'elenco</button>
+        <button type="button" id="backToDashboardVehicleBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      </div>
+      
+      <div id="stepCustomer">
+        <label>Cliente:</label>
+        <select id="customerSelect" required>
+          <option value="">-- Seleziona cliente --</option>
+        </select>
+      </div>
+      <div id="stepType" style="display:none;">
+        <label>Tipo Veicolo:</label>
+        <select id="vehicleTypeSelect" required>
+          <option value="">-- Seleziona tipo --</option>
+          <option value="Automobile">Automobile</option>
+          <option value="Motocicletta">Motocicletta</option>
+          <option value="Furgone">Furgone</option>
+          <option value="Camion">Camion</option>
+          <option value="Barca">Barca</option>
+        </select>
+      </div>
+      <div id="stepMake" style="display:none;">
+        <label>Marca:</label>
+        <select id="makeSelect" required>
+          <option value="">-- Seleziona marca --</option>
+        </select>
+      </div>
+      <div id="stepModel" style="display:none;">
+        <label>Modello:</label>
+        <select id="modelSelect" required>
+          <option value="">-- Seleziona modello --</option>
+        </select>
+        <input type="text" id="modelManual" placeholder="Inserisci modello manualmente" style="display:none;" />
+      </div>
+      <div id="stepYear" style="display:none;">
+        <label>Anno:</label>
+        <select id="yearSelect" required>
+          <option value="">-- Seleziona anno --</option>
+        </select>
+        <input type="number" id="yearManual" placeholder="Inserisci anno" min="1900" max="2099" style="display:none;" />
+      </div>
+      <div id="stepColor" style="display:none;">
+        <label>Colore:</label>
+        <select id="colorSelect" required>
+          <option value="">-- Seleziona colore --</option>
+          <option value="Nero">Nero</option>
+          <option value="Bianco">Bianco</option>
+          <option value="Grigio">Grigio</option>
+          <option value="Rosso">Rosso</option>
+          <option value="Blu">Blu</option>
+          <option value="Argento">Argento</option>
+          <option value="Verde">Verde</option>
+          <option value="Giallo">Giallo</option>
+          <option value="Arancione">Arancione</option>
+          <option value="Marrone">Marrone</option>
+        </select>
+      </div>
+      <div id="stepChassis" style="display:none;">
+        <label>Numero Telaio:</label>
+        <input type="text" id="chassisNumber" required />
+      </div>
+      <div id="stepLicense" style="display:none;">
+        <label>Targa:</label>
+        <input type="text" id="licensePlate" required />
+      </div>
+      <div id="stepNotes" style="display:none;">
+        <label>Note:</label>
+        <textarea id="vehicleNotes" rows="3"></textarea>
+      </div>
+      <div id="stepActions" class="form-actions" style="display:none;">
+        <button type="button" id="cancelVehicleBtn" class="btn btn--ghost">Annulla</button>
+        <button type="submit" id="saveVehicleBtn" class="btn btn--primary">Salva</button>
+      </div>
+      <div id="vehicleFormMsg"></div>
+    </form>
+  </section>
+
+  <!-- ðŸ“… SEZIONE GESTIONE APPUNTAMENTI -->
+  <section id="appointmentManageSection" style="display: none;">
+    <h3>ðŸ“… Gestione Appuntamenti</h3>
+    <div class="toolbar">
+      <button id="backToDashboardAppointmentsBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      <button id="showAppointmentFormFromListBtn" class="btn btn--primary">âž• Nuovo appuntamento</button>
+    </div>
+    
+    <fieldset>
+      <legend>Filtri appuntamenti</legend>
+      
+      <label for="filterCustomer">Cliente:</label>
+      <input type="text" id="filterCustomer" />
+      
+      <label for="filterPlate">Targa:</label>
+      <input type="text" id="filterPlate" />
+      
+      <label for="filterChassis">NÂ° TELAIO:</label>
+      <input type="text" id="filterChassis" />
+      
+      <label for="filterJobType">Tipo lavoro:</label>
+      <select id="filterJobType">
+        <option value="">Tutti</option>
+      </select>
+      
+      <label for="filterOperator">Operatore:</label>
+      <select id="filterOperator">
+        <option value="">Tutti</option>
+      </select>
+      
+      <label for="filterStatus">Stato:</label>
+      <select id="filterStatus">
+        <option value="">Tutti</option>
+        <option value="programmato">Programmato</option>
+        <option value="ricezione">Ricezione</option>
+        <option value="attesa">Attesa</option>
+        <option value="lavorazione">Lavorazione</option>
+        <option value="pronto">Pronto</option>
+        <option value="in consegna">In consegna</option>
+        <option value="concluso">Concluso</option>
+        <option value="fatturato">Fatturato</option>
+        <option value="pagato">Pagato</option>
+      </select>
+      
+      <label for="filterDate">Data lavorazione:</label>
+      <input type="date" id="filterDate" />
+      
+      <div class="form-actions">
+        <button type="button" id="resetAppointmentsBtn" class="btn btn--ghost">Azzera Filtri</button>
+        <button type="button" id="searchAppointmentsBtn" class="btn btn--primary">Cerca</button>
+      </div>
+    </fieldset>
+    
+    <div id="appointmentsList"></div>
+  </section>
+
+  <!-- ðŸ“… SEZIONE NUOVO APPUNTAMENTO -->
+  <section id="appointmentFormSection" style="display: none;">
+    <h3 id="appointmentFormTitle">âž• Nuovo appuntamento</h3>
+    <div class="toolbar">
+      <button type="button" id="backToListAppointmentBtn" class="btn btn--ghost">â† Torna all'elenco</button>
+      <button type="button" id="backToDashboardAppointmentBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+    </div>
+    <form id="appointmentForm" autocomplete="off">
+      <div id="stepLocationAppointment"></div>
+      <div id="stepOperatorAppointment"></div>
+      <div id="stepCustomerTypeAppointment"></div>
+      <div id="stepCustomerAppointment"></div>
+      <div id="stepContactPersonAppointment"></div>
+      <div id="stepVehicleAppointment"></div>
+      <div id="stepVehicleCardAppointment"></div>
+      <div id="stepJobTypeAppointment"></div>
+      <div id="stepDatesAppointment"></div>
+      <div id="stepInternalNoteAppointment"></div>
+      <div id="stepActionsAppointment" class="form-actions">
+        <button type="button" id="cancelAppointmentBtn" class="btn btn--ghost">Annulla</button>
+        <button type="submit" id="saveAppointmentBtn" class="btn btn--primary">Salva</button>
+      </div>
+      <div id="appointmentFormMsg"></div>
+    </form>
+  </section>
+
+  <!-- ðŸ”— Script principali -->
   <script type="module" src="/src/app.js"></script>
+  <script type="module" src="/src/forms/clientForm.js"></script>
+  <script type="module" src="/src/forms/clientEdit.js"></script>
+  <script type="module" src="/src/forms/vehicleForm.js"></script>
+  <script type="module" src="/src/forms/vehicleManage.js"></script>
+  <script type="module" src="/src/forms/appointmentForm.js"></script>
+
 </body>
 </html>
+
+

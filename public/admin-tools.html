@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Inizializza campo active</title>
+</head>
+<body>
+  <h2>🛠️ Strumento Admin: Inizializza campo "active" nei clienti</h2>
+  <p>Questa operazione imposta <strong>active: true</strong> in tutti i documenti della collezione <code>clients</code> che ne sono privi.</p>
+  <button id="startBtn">▶️ Avvia aggiornamento</button>
+  <p id="log"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, getDocs, collection, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrBjfxtshgBskV4KOaUc3lO6VI0ATNG88",
+      authDomain: "cardetailingapp-e6c95.firebaseapp.com",
+      projectId: "cardetailingapp-e6c95"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const log = document.getElementById("log");
+    const btn = document.getElementById("startBtn");
+
+    btn.addEventListener("click", async () => {
+      log.textContent = "⏳ Attendere...";
+      btn.disabled = true;
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          log.textContent = "⛔ Autenticazione richiesta.";
+          return;
+        }
+
+        try {
+          const snap = await getDocs(collection(db, "clients"));
+          let count = 0;
+
+          for (const d of snap.docs) {
+            const data = d.data();
+            if (data.active === undefined) {
+              await updateDoc(doc(db, "clients", d.id), { active: true });
+              count++;
+            }
+          }
+
+          log.textContent = `✅ Aggiornati ${count} documenti.`;
+        } catch (err) {
+          console.error(err);
+          log.textContent = "❌ Errore durante l'aggiornamento.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

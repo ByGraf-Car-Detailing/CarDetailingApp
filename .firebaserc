@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "cardetailingapp-e6c95"
+    "default": "cardetailingapp-e6c95",
+    "prod": "cardetailingapp-e6c95",
+    "staging": "cardetailingapp-e6c95-staging"
   }
 }

@@ -2,18 +2,93 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
+    function actorPath() {
+      return /databases/$(database)/documents/allowedUsers/$(request.auth.token.email);
+    }
+
+    function isAllowed() {
+      return isSignedIn() && exists(actorPath());
+    }
+
+    function actorRole() {
+      return isAllowed() ? get(actorPath()).data.role : null;
+    }
+
+    function isAdmin() {
+      return actorRole() == "admin";
+    }
+
+    function isStaff() {
+      return actorRole() == "staff";
+    }
+
+    function isAllowedRole() {
+      return isAdmin() || isStaff();
+    }
+
+    function isOwnerCreated() {
+      return isAllowed() && resource.data.createdBy == request.auth.token.email;
+    }
+
+    function preservesCreatedBy() {
+      return !("createdBy" in request.resource.data) || request.resource.data.createdBy == resource.data.createdBy;
+    }
+
+    match /allowedUsers/{email} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /cars/{carId} {
+      allow read: if isAllowedRole();
+      allow create: if isAllowedRole();
+      allow update: if isAdmin() || (isStaff() && isOwnerCreated() && preservesCreatedBy());
+      allow delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAllowedRole();
+      allow create: if isAllowedRole() && request.resource.data.createdBy == request.auth.token.email;
+      allow update: if isAdmin()
+        || (isStaff()
+          && isOwnerCreated()
+          && preservesCreatedBy()
+          && request.resource.data.deleted == resource.data.deleted);
+      allow delete: if false; // soft delete only
+    }
+
+    match /jobTypes/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /vehicleMakes/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /vehicleModels/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /syncErrors/{id} {
+      allow read: if isAdmin();
+      allow create: if isAllowedRole();
+      allow update, delete: if isAdmin();
+    }
+
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 7, 16);
+      allow read, write: if false;
     }
   }
 }
