@@ -111,6 +111,8 @@ test-results/
 firestore-debug.log
 desktop.ini
 **/desktop.ini
+.old/
+**/.old/
 
 # Sensitive files
 **/service-account.json
