@@ -24,7 +24,16 @@ jobs:
       - name: Authenticate Firebase (Service Account)
         shell: bash
         run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}" ]; then
+            echo "Missing secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+            exit 1
+          fi
           printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa.json"
+          SA_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$SA_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$SA_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
+            exit 1
+          fi
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
 
       - name: Deploy to Firebase staging
