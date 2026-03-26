@@ -37,6 +37,7 @@ const PATTERNS = [
 const findings = [];
 
 function shouldSkipFile(filePath) {
+  if (filePath === "scripts/scan-secrets.mjs") return true;
   return FILE_SKIP_SUFFIXES.some((suffix) => filePath.endsWith(suffix));
 }
 
