@@ -23,13 +23,15 @@ const FILE_SKIP_SUFFIXES = [
   ".ttf",
   ".mp4",
   ".lock",
+  ".example.json",
 ];
 
 const PATTERNS = [
-  /BEGIN PRIVATE KEY/, 
-  /AIza[0-9A-Za-z\-_]{35}/,
+  /BEGIN PRIVATE KEY/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /"private_key"\s*:/,
+  /xox[baprs]-[0-9A-Za-z-]{10,}/,
+  /ghp_[0-9A-Za-z]{20,}/,
+  /gho_[0-9A-Za-z]{20,}/,
 ];
 
 const findings = [];
