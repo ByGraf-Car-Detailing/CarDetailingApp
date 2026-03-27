@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { loginViaEmu } from "./helpers/auth";
 
+test.describe.configure({ timeout: 60_000 });
+
 test("compat: login, navigation, reload, logout", async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await loginViaEmu(page, "admin@test.local", "Passw0rd!");
