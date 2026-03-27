@@ -14,6 +14,7 @@ import {
 import { hideSteps } from "./forms/vehicleForm.js";
 import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
+import { initRouter } from "./router.js";
 
 
 // DOM
@@ -34,6 +35,15 @@ const appointmentFormSection = document.getElementById("appointmentFormSection")
 
 const auth = getAuth();
 const db = getFirestore();
+const sectionByView = [
+  { key: "gestioneAppuntamenti", el: appointmentManageSection },
+  { key: "nuovoAppuntamento", el: appointmentFormSection },
+  { key: "gestioneVeicoli", el: vehicleManageSection },
+  { key: "gestioneClienti", el: clientManageSection },
+  { key: "formClienti", el: clientFormSection },
+  { key: "modificaClienti", el: clientEditSection },
+];
+const router = initRouter({ sectionByView, hideAllSections });
 
 // Nascondi tutto all'avvio
 dashboardContainer.style.display = "none";
@@ -48,25 +58,6 @@ function showLoginState() {
   dashboardContainer.style.display = "none";
   logoutBtn.style.display = "none";
 }
-
-function persistCurrentViewFromUI() {
-  const sectionByView = [
-    { key: "gestioneAppuntamenti", el: appointmentManageSection },
-    { key: "nuovoAppuntamento", el: appointmentFormSection },
-    { key: "gestioneVeicoli", el: vehicleManageSection },
-    { key: "gestioneClienti", el: clientManageSection },
-    { key: "formClienti", el: clientFormSection },
-    { key: "modificaClienti", el: clientEditSection },
-  ];
-  const active = sectionByView.find(item => item.el && getComputedStyle(item.el).display !== "none");
-  if (active) {
-    localStorage.setItem("currentView", active.key);
-  }
-}
-
-window.addEventListener("beforeunload", () => {
-  persistCurrentViewFromUI();
-});
 
 const sessionController = initSessionManager({
   auth,
@@ -87,39 +78,12 @@ function updateUI(userInfo) {
   loginContainer.style.display = "none";
   logoutBtn.style.display = "inline-block";
 
-  // ---- PATCH: SPA navigation "currentView" prioritario ----
-  const currentView = localStorage.getItem("currentView");
-  if (currentView === "formClienti") {
-    hideAllSections();
-    clientFormSection.style.display = "block";
-    return;
-  } else if (currentView === "modificaClienti") {
-    hideAllSections();
-    clientEditSection.style.display = "block";
-    return;
-  } else if (currentView === "gestioneVeicoli") {
-    hideAllSections();
-    vehicleManageSection.style.display = "block";
-    import("./forms/vehicleManage.js").then(m => m.loadVehicles());
-    return;
-  } else if (currentView === "gestioneClienti") {
-    hideAllSections();
-    clientManageSection.style.display = "block";
-    import("./forms/clientManage.js").then(m => m.loadClients());
-    return;
-  } else if (currentView === "gestioneAppuntamenti") {
-    hideAllSections();
-    appointmentManageSection.style.display = "block";
-    import("./forms/appointmentManage.js").then(m => m.loadAppointments());
-    return;
-  } else if (currentView === "nuovoAppuntamento") {
-    hideAllSections();
-    appointmentFormSection.style.display = "block";
-    import("./forms/appointmentForm.js").then(m => m.resetAppointmentForm());
+  const restoredView = router.restoreCurrentView();
+  if (restoredView) {
+    applyCurrentViewEffects(restoredView);
     return;
   }
 
-  // ---- Solo se nessun currentView valido: mostra dashboard ----
   showDashboard(userInfo);
 }
 
@@ -151,6 +115,24 @@ function addRoleButton(label, action) {
 
   btn.addEventListener("click", action);
   roleButtons.appendChild(btn);
+}
+
+function applyCurrentViewEffects(viewKey) {
+  if (viewKey === "gestioneVeicoli") {
+    import("./forms/vehicleManage.js").then((m) => m.loadVehicles());
+    return;
+  }
+  if (viewKey === "gestioneClienti") {
+    import("./forms/clientManage.js").then((m) => m.loadClients());
+    return;
+  }
+  if (viewKey === "gestioneAppuntamenti") {
+    import("./forms/appointmentManage.js").then((m) => m.loadAppointments());
+    return;
+  }
+  if (viewKey === "nuovoAppuntamento") {
+    import("./forms/appointmentForm.js").then((m) => m.resetAppointmentForm());
+  }
 }
 
 // ðŸ§¹ Controlla se ci sono contatti orfani
@@ -191,6 +173,10 @@ async function checkInvalidContacts() {
 
 const jsErrorBanner = document.getElementById("jsErrorBanner");
 initGlobalErrorHandling({ bannerEl: jsErrorBanner });
+
+window.addEventListener("beforeunload", () => {
+  router.persistCurrentViewFromUI();
+});
 
 
 export async function showDashboard(userInfo = null) {
@@ -258,31 +244,31 @@ export async function showDashboard(userInfo = null) {
       const backToDash = document.getElementById("backToDashboardAppointmentsBtn");
       if (backToDash) {
         backToDash.onclick = () => {
-          localStorage.removeItem("currentView");
+          router.clearCurrentView();
           showDashboard();
         };
       }
       import("./forms/appointmentManage.js").then(m => m.loadAppointments());
-      localStorage.setItem("currentView", "gestioneAppuntamenti");
+      router.setCurrentView("gestioneAppuntamenti");
     });
     addRoleButton("Nuovo appuntamento", () => {
       hideAllSections();
       appointmentFormSection.style.display = "block";
       import("./forms/appointmentForm.js").then(m => m.resetAppointmentForm());
-      localStorage.setItem("currentView", "nuovoAppuntamento");
+      router.setCurrentView("nuovoAppuntamento");
     });
     addRoleButton("Gestione Veicoli", () => {
       hideAllSections();
       vehicleManageSection.style.display = "block";
       import("./forms/vehicleManage.js").then(m => m.loadVehicles());
-      localStorage.setItem("currentView", "gestioneVeicoli");
+      router.setCurrentView("gestioneVeicoli");
     });
     if (userRole === "admin") {
       addRoleButton("Gestione Clienti", () => {
         hideAllSections();
         clientManageSection.style.display = "block";
         import("./forms/clientManage.js").then(m => m.loadClients());
-        localStorage.setItem("currentView", "gestioneClienti");
+        router.setCurrentView("gestioneClienti");
       });
     }
   }
