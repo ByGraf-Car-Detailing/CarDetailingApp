@@ -18,7 +18,8 @@
                     "test:emu":  "firebase emulators:exec --only auth,firestore,hosting \"node scripts/seed-emulators.mjs \u0026\u0026 npx playwright test\"",
                     "lint:quality": "node scripts/lint-quality.mjs",
                     "secrets:scan": "node scripts/scan-secrets.mjs",
-                    "ci:baseline": "npm run secrets:scan \u0026\u0026 npm run lint:quality \u0026\u0026 npm run test:emu"
+                    "ci:baseline": "npm run secrets:scan \u0026\u0026 npm run lint:quality \u0026\u0026 npm run test:emu",
+                    "mirror:prod:staging": "node scripts/mirror-prod-to-staging.mjs"
                 },
     "repository":  {
                        "type":  "git",

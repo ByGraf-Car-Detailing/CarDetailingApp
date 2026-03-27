@@ -1,0 +1,95 @@
+name: Mirror Prod to Staging (Sanitized)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: source=prod target=staging"
+        required: true
+        type: string
+      dry_run:
+        description: "Run all checks without writing staging"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  mirror-prod-to-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate mirror confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "source=prod target=staging" ]; then
+            echo "Invalid confirmation value. Expected exactly: source=prod target=staging"
+            exit 1
+          fi
+
+      - name: Materialize service accounts
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$RUNNER_TEMP/firebase-sa-prod.json"
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa-staging.json"
+
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-prod.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_PROD"
+            exit 1
+          fi
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-staging.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+            exit 1
+          fi
+
+          PROD_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-prod.json','utf8'));process.stdout.write(j.project_id||'')")
+          STAGING_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-staging.json','utf8'));process.stdout.write(j.project_id||'')")
+
+          if [ "$PROD_PROJECT_ID" != "cardetailingapp-e6c95" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_PROD project_id mismatch: got '$PROD_PROJECT_ID', expected 'cardetailingapp-e6c95'"
+            exit 1
+          fi
+          if [ "$STAGING_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$STAGING_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.MIRROR_PSEUDONYM_SALT }}" ]; then
+            echo "Missing secret MIRROR_PSEUDONYM_SALT"
+            exit 1
+          fi
+
+          echo "PROD_SA_PATH=$RUNNER_TEMP/firebase-sa-prod.json" >> "$GITHUB_ENV"
+          echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+
+      - name: Run sanitized mirror (prod -> staging)
+        env:
+          MIRROR_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          MIRROR_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          MIRROR_PSEUDONYM_SALT: ${{ secrets.MIRROR_PSEUDONYM_SALT }}
+          MIRROR_ARTIFACTS_DIR: artifacts/mirror
+          PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
+          STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
+        run: node scripts/mirror-prod-to-staging.mjs
+
+      - name: Upload mirror artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirror-prod-to-staging-${{ github.run_id }}
+          path: artifacts/mirror
+          if-no-files-found: warn
