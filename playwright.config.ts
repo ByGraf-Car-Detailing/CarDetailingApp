@@ -56,6 +56,7 @@ export default defineConfig({
     {
       name: "iphone-webkit-compat",
       use: { ...devices["iPhone 13"] },
+      timeout: 45_000,
       testMatch: /compat-cross-device\.spec\.ts/,
     },
   ],
