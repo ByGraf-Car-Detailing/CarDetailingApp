@@ -15,6 +15,7 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { hideSteps } from "./forms/vehicleForm.js";
+import { initGlobalErrorHandling } from "./errorHandler.js";
 
 
 // DOM
@@ -245,30 +246,8 @@ async function checkInvalidContacts() {
   }
 }
 
-// === Logging errori JS globali ===
 const jsErrorBanner = document.getElementById("jsErrorBanner");
-
-function showJsErrorBanner(message) {
-  if (!jsErrorBanner) return;
-  jsErrorBanner.style.display = "block";
-  jsErrorBanner.textContent = message;
-  setTimeout(() => {
-    jsErrorBanner.style.display = "none";
-  }, 15000);
-}
-
-window.addEventListener("error", function (event) {
-  const msg = `[JS ERROR] ${event.message || "Errore sconosciuto"} (${event.filename}:${event.lineno})`;
-  showJsErrorBanner(msg);
-  console.error(msg, event.error || "");
-});
-
-// Cattura anche Promise non gestite
-window.addEventListener("unhandledrejection", function (event) {
-  const msg = `[JS PROMISE] ${event.reason ? event.reason.message : "Errore promessa non gestita"}`;
-  showJsErrorBanner(msg);
-  console.error(msg, event.reason || "");
-});
+initGlobalErrorHandling({ bannerEl: jsErrorBanner });
 
 
 export async function showDashboard(userInfo = null) {
