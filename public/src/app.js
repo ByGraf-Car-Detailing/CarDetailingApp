@@ -1,9 +1,6 @@
 ﻿// âœ… src/app.js
-import { loginWithGoogle } from "./services/authService.js";
 import {
-  getAuth,
-  signOut,
-  onAuthStateChanged
+  getAuth
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
   getFirestore,
@@ -16,6 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { hideSteps } from "./forms/vehicleForm.js";
 import { initGlobalErrorHandling } from "./errorHandler.js";
+import { initSessionManager } from "./sessionManager.js";
 
 
 // DOM
@@ -70,73 +68,18 @@ window.addEventListener("beforeunload", () => {
   persistCurrentViewFromUI();
 });
 
-// ðŸ”„ Ripristina sessione utente
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    showLoginState();
-    return;
-  }
-
-  let userRole = localStorage.getItem("userRole");
-  try {
-    const userRef = doc(db, "allowedUsers", user.email);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("currentView");
-      await signOut(auth);
-      showLoginState();
-      return;
-    }
-    userRole = userSnap.data().role || userRole || "user";
-    localStorage.setItem("userRole", userRole);
-  } catch (err) {
-    console.error("Errore verifica ruolo:", err.message);
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("currentView");
-    await signOut(auth);
-    showLoginState();
-    return;
-  }
-
-  const userInfo = {
-    name: user.displayName,
-    email: user.email,
-    role: userRole
-  };
-
-  // Salva sempre i dati utente in localStorage per showDashboard()
-  localStorage.setItem("userName", user.displayName || "");
-  localStorage.setItem("userEmail", user.email || "");
-
-  updateUI(userInfo);
-  await checkInvalidContacts();
+const sessionController = initSessionManager({
+  auth,
+  db,
+  loginBtn,
+  logoutBtn,
+  onAuthenticated: updateUI,
+  onLoggedOut: showLoginState,
+  onPostAuthCheck: checkInvalidContacts,
 });
 
-// ðŸ” Login handler
-loginBtn.addEventListener("click", async () => {
-  const userInfo = await loginWithGoogle();
-  if (userInfo) {
-    // Salva in localStorage - onAuthStateChanged gestirÃ  l'UI
-    localStorage.setItem("userRole", userInfo.role);
-    localStorage.setItem("userName", userInfo.name || "");
-    localStorage.setItem("userEmail", userInfo.email || "");
-    // NON chiamare updateUI() qui - evita duplicazione pulsanti
-  }
-});
-
-// ðŸšª Logout handler
-logoutBtn.addEventListener("click", async () => {
-  await signOut(auth);
-  localStorage.clear();
-  location.reload();
+window.addEventListener("beforeunload", () => {
+  sessionController.teardown();
 });
 
 // ðŸŽ› Funzione UI centrale
