@@ -39,8 +39,24 @@ export default defineConfig({
 
   projects: [
     {
-      name: "chromium",
+      name: "chromium-core",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: /compat-cross-device\.spec\.ts/,
+    },
+    {
+      name: "desktop-edge-compat",
+      use: { ...devices["Desktop Edge"] },
+      testMatch: /compat-cross-device\.spec\.ts/,
+    },
+    {
+      name: "android-chrome-compat",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /compat-cross-device\.spec\.ts/,
+    },
+    {
+      name: "iphone-webkit-compat",
+      use: { ...devices["iPhone 13"] },
+      testMatch: /compat-cross-device\.spec\.ts/,
     },
   ],
 });

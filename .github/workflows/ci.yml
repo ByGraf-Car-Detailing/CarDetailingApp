@@ -28,11 +28,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Secret scan
         run: npm run secrets:scan
+
+      - name: Quality lint gate
+        run: npm run lint:quality
 
       - name: Emulator E2E baseline
         run: npm run test:emu
