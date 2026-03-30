@@ -15,6 +15,44 @@ const COLLECTIONS = [
   "vehicleMakes",
   "vehicleModels",
 ];
+const EXPORT_PAGE_SIZE = 200;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableFirestoreError(err) {
+  const code = Number(err?.code);
+  const msg = String(err?.message || "").toUpperCase();
+  return (
+    code === 4 ||
+    code === 8 ||
+    code === 10 ||
+    code === 13 ||
+    code === 14 ||
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("DEADLINE_EXCEEDED") ||
+    msg.includes("UNAVAILABLE")
+  );
+}
+
+async function withRetries(label, fn, maxAttempts = 6) {
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt += 1;
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isRetryableFirestoreError(err) || attempt >= maxAttempts) {
+        throw err;
+      }
+      const delayMs = Math.min(1500 * Math.pow(2, attempt - 1), 15000);
+      console.warn(`[mirror] retry ${label} attempt=${attempt}/${maxAttempts} delay=${delayMs}ms reason=${err?.message || err}`);
+      await sleep(delayMs);
+    }
+  }
+  throw new Error(`Unexpected retry loop termination for ${label}`);
+}
 
 function ensureDir(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -169,13 +207,25 @@ function transformAllowedUsersDocId(docId, salt) {
 }
 
 async function exportCollectionRecursive(collectionRef, docsOut) {
-  const snap = await collectionRef.get();
-  for (const docSnap of snap.docs) {
-    docsOut.push({ path: docSnap.ref.path, data: docSnap.data() });
-    const subcollections = await docSnap.ref.listCollections();
-    for (const sub of subcollections) {
-      await exportCollectionRecursive(sub, docsOut);
+  let cursor = null;
+  let page = 0;
+  while (true) {
+    let query = collectionRef.orderBy(admin.firestore.FieldPath.documentId()).limit(EXPORT_PAGE_SIZE);
+    if (cursor) {
+      query = query.startAfter(cursor);
     }
+    const snap = await withRetries(`export page ${collectionRef.path}#${page}`, () => query.get());
+    if (snap.empty) break;
+    for (const docSnap of snap.docs) {
+      docsOut.push({ path: docSnap.ref.path, data: docSnap.data() });
+      const subcollections = await withRetries(`list subcollections ${docSnap.ref.path}`, () => docSnap.ref.listCollections());
+      for (const sub of subcollections) {
+        await exportCollectionRecursive(sub, docsOut);
+      }
+    }
+    cursor = snap.docs[snap.docs.length - 1];
+    page += 1;
+    await sleep(50);
   }
 }
 
@@ -183,6 +233,7 @@ async function exportDataset(db, collections) {
   const exported = [];
   for (const colName of collections) {
     await exportCollectionRecursive(db.collection(colName), exported);
+    await sleep(100);
   }
   return exported;
 }
@@ -213,17 +264,21 @@ function sanitizeDataset(rawDocs, salt) {
 }
 
 async function deleteDocRecursive(docRef) {
-  const subs = await docRef.listCollections();
+  const subs = await withRetries(`list subcollections for delete ${docRef.path}`, () => docRef.listCollections());
   for (const sub of subs) {
     await deleteCollectionRecursive(sub);
   }
-  await docRef.delete();
+  await withRetries(`delete doc ${docRef.path}`, () => docRef.delete());
 }
 
 async function deleteCollectionRecursive(collectionRef) {
-  const snap = await collectionRef.get();
+  const snap = await withRetries(`delete collection read ${collectionRef.path}`, () => collectionRef.limit(200).get());
   for (const docSnap of snap.docs) {
     await deleteDocRecursive(docSnap.ref);
+  }
+  if (!snap.empty) {
+    await sleep(75);
+    await deleteCollectionRecursive(collectionRef);
   }
 }
 
@@ -240,7 +295,7 @@ function sortByPathDepth(docs) {
 async function importDataset(db, docs) {
   const ordered = sortByPathDepth(docs);
   for (const entry of ordered) {
-    await db.doc(entry.path).set(entry.data, { merge: false });
+    await withRetries(`import ${entry.path}`, () => db.doc(entry.path).set(entry.data, { merge: false }));
   }
 }
 
@@ -248,7 +303,7 @@ async function listAllUsers(auth) {
   let token;
   const users = [];
   do {
-    const page = await auth.listUsers(1000, token);
+    const page = await withRetries("list auth users", () => auth.listUsers(1000, token));
     users.push(...page.users);
     token = page.pageToken;
   } while (token);
@@ -299,11 +354,11 @@ async function syncAuthUsers(prodAuth, stagingAuth, salt) {
     if (user.email) payload.password = randomPassword();
 
     if (stagingByUid.has(user.uid)) {
-      await stagingAuth.updateUser(user.uid, payload);
+      await withRetries(`auth update ${user.uid}`, () => stagingAuth.updateUser(user.uid, payload));
     } else {
-      await stagingAuth.createUser(payload);
+      await withRetries(`auth create ${user.uid}`, () => stagingAuth.createUser(payload));
     }
-    await stagingAuth.setCustomUserClaims(user.uid, user.customClaims);
+    await withRetries(`auth set claims ${user.uid}`, () => stagingAuth.setCustomUserClaims(user.uid, user.customClaims));
     upserted += 1;
   }
 
@@ -313,7 +368,7 @@ async function syncAuthUsers(prodAuth, stagingAuth, salt) {
     if (prodUids.has(stagingUser.uid)) continue;
     const claims = stagingUser.customClaims || {};
     if (claims.keepInStaging === true) continue;
-    await stagingAuth.deleteUser(stagingUser.uid);
+    await withRetries(`auth delete stale ${stagingUser.uid}`, () => stagingAuth.deleteUser(stagingUser.uid));
     deleted += 1;
   }
 
@@ -330,7 +385,7 @@ async function restoreAuthBackup(stagingAuth, backupUsers) {
   for (const user of current) {
     const claims = user.customClaims || {};
     if (claims.keepInStaging === true) continue;
-    await stagingAuth.deleteUser(user.uid);
+    await withRetries(`auth rollback delete ${user.uid}`, () => stagingAuth.deleteUser(user.uid));
   }
 
   for (const user of backupUsers) {
@@ -344,9 +399,9 @@ async function restoreAuthBackup(stagingAuth, backupUsers) {
     if (user.phoneNumber) payload.phoneNumber = user.phoneNumber;
     if (user.email) payload.password = randomPassword();
 
-    await stagingAuth.createUser(payload);
+    await withRetries(`auth rollback create ${user.uid}`, () => stagingAuth.createUser(payload));
     if (user.customClaims) {
-      await stagingAuth.setCustomUserClaims(user.uid, user.customClaims);
+      await withRetries(`auth rollback claims ${user.uid}`, () => stagingAuth.setCustomUserClaims(user.uid, user.customClaims));
     }
   }
 }
