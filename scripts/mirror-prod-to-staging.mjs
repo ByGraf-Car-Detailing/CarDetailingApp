@@ -426,6 +426,15 @@ function collectProdDomains(rawDocs, prodUsers) {
 function scanSanitizedDocsForPii(docs, forbiddenDomains) {
   const findings = [];
   const rawEmail = /[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/gi;
+  const strictPhone = /^\+?[0-9][0-9\s\-()]{7,}$/;
+
+  function isPhoneLike(value) {
+    if (typeof value !== "string") return false;
+    const trimmed = value.trim();
+    if (!strictPhone.test(trimmed)) return false;
+    const digitCount = (trimmed.match(/\d/g) || []).length;
+    return digitCount >= 8;
+  }
 
   const scanValue = (pathKey, value, docPath) => {
     if (typeof value === "string") {
@@ -438,7 +447,7 @@ function scanSanitizedDocsForPii(docs, forbiddenDomains) {
       }
       rawEmail.lastIndex = 0;
 
-      if (/\+?\d[\d\s\-()]{7,}/.test(value) && !value.startsWith("+39000")) {
+      if (isPhoneLike(value) && !value.startsWith("+39000")) {
         findings.push({ type: "phone_pattern", docPath, pathKey, value: value.slice(0, 32) });
       }
     } else if (Array.isArray(value)) {
