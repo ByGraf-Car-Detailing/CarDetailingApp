@@ -16,6 +16,7 @@ const COLLECTIONS = [
   "vehicleModels",
 ];
 const EXPORT_PAGE_SIZE = 200;
+const INCLUDE_SUBCOLLECTIONS = String(process.env.MIRROR_INCLUDE_SUBCOLLECTIONS || "false").toLowerCase() === "true";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -218,9 +219,11 @@ async function exportCollectionRecursive(collectionRef, docsOut) {
     if (snap.empty) break;
     for (const docSnap of snap.docs) {
       docsOut.push({ path: docSnap.ref.path, data: docSnap.data() });
-      const subcollections = await withRetries(`list subcollections ${docSnap.ref.path}`, () => docSnap.ref.listCollections());
-      for (const sub of subcollections) {
-        await exportCollectionRecursive(sub, docsOut);
+      if (INCLUDE_SUBCOLLECTIONS) {
+        const subcollections = await withRetries(`list subcollections ${docSnap.ref.path}`, () => docSnap.ref.listCollections());
+        for (const sub of subcollections) {
+          await exportCollectionRecursive(sub, docsOut);
+        }
       }
     }
     cursor = snap.docs[snap.docs.length - 1];
@@ -264,9 +267,11 @@ function sanitizeDataset(rawDocs, salt) {
 }
 
 async function deleteDocRecursive(docRef) {
-  const subs = await withRetries(`list subcollections for delete ${docRef.path}`, () => docRef.listCollections());
-  for (const sub of subs) {
-    await deleteCollectionRecursive(sub);
+  if (INCLUDE_SUBCOLLECTIONS) {
+    const subs = await withRetries(`list subcollections for delete ${docRef.path}`, () => docRef.listCollections());
+    for (const sub of subs) {
+      await deleteCollectionRecursive(sub);
+    }
   }
   await withRetries(`delete doc ${docRef.path}`, () => docRef.delete());
 }
