@@ -82,6 +82,7 @@ jobs:
           MIRROR_DRY_RUN: ${{ github.event.inputs.dry_run }}
           MIRROR_PSEUDONYM_SALT: ${{ secrets.MIRROR_PSEUDONYM_SALT }}
           MIRROR_ARTIFACTS_DIR: artifacts/mirror
+          MIRROR_INCLUDE_SUBCOLLECTIONS: "false"
           PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
           STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
         run: node scripts/mirror-prod-to-staging.mjs
