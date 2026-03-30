@@ -17,6 +17,11 @@ const COLLECTIONS = [
 ];
 const EXPORT_PAGE_SIZE = 200;
 const INCLUDE_SUBCOLLECTIONS = String(process.env.MIRROR_INCLUDE_SUBCOLLECTIONS || "false").toLowerCase() === "true";
+const COLLECTION_PROFILES = {
+  all: COLLECTIONS,
+  core: ["allowedUsers", "clients", "cars", "appointments"],
+  reference: ["jobTypes", "vehicleMakes", "vehicleModels"],
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -62,6 +67,24 @@ function ensureDir(filePath) {
 function writeJson(filePath, data) {
   ensureDir(filePath);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+function parsePositiveInt(name, rawValue, fallback) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") return fallback;
+  const value = Number(rawValue);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${name} must be a positive integer. Got '${rawValue}'`);
+  }
+  return value;
+}
+
+function resolveCollectionProfile(profileRaw) {
+  const profile = String(profileRaw || "all").toLowerCase();
+  const collections = COLLECTION_PROFILES[profile];
+  if (!collections) {
+    throw new Error(`Unsupported MIRROR_COLLECTION_PROFILE='${profileRaw}'. Allowed: ${Object.keys(COLLECTION_PROFILES).join(", ")}`);
+  }
+  return { profile, collections };
 }
 
 function isPlainObject(value) {
@@ -239,6 +262,16 @@ async function exportDataset(db, collections) {
     await sleep(100);
   }
   return exported;
+}
+
+async function estimateCollectionDocCounts(db, collections) {
+  const counts = {};
+  for (const colName of collections) {
+    const agg = await withRetries(`count ${colName}`, () => db.collection(colName).count().get());
+    counts[colName] = Number(agg?.data()?.count || 0);
+    await sleep(50);
+  }
+  return counts;
 }
 
 function sanitizeDataset(rawDocs, salt) {
@@ -574,6 +607,8 @@ async function main() {
   const confirmation = process.env.MIRROR_CONFIRMATION || "";
   const dryRun = String(process.env.MIRROR_DRY_RUN || "false").toLowerCase() === "true";
   const salt = process.env.MIRROR_PSEUDONYM_SALT || "";
+  const { profile, collections: selectedCollections } = resolveCollectionProfile(process.env.MIRROR_COLLECTION_PROFILE || "all");
+  const readBudgetDocs = parsePositiveInt("MIRROR_DOC_READ_BUDGET", process.env.MIRROR_DOC_READ_BUDGET, 20000);
 
   if (confirmation !== REQUIRED_CONFIRMATION) {
     throw new Error(`Invalid confirmation. Required exactly: '${REQUIRED_CONFIRMATION}'`);
@@ -600,6 +635,7 @@ async function main() {
   const stagingAuth = admin.auth(stagingApp);
 
   const artifactsDir = process.env.MIRROR_ARTIFACTS_DIR || "artifacts/mirror";
+  fs.mkdirSync(artifactsDir, { recursive: true });
   const summaryPath = path.join(artifactsDir, "summary.json");
   const manifestPath = path.join(artifactsDir, "manifest.json");
   const prodSnapshotPath = path.join(artifactsDir, "prod-export-raw.json");
@@ -607,8 +643,28 @@ async function main() {
   const stagingBackupPath = path.join(artifactsDir, "staging-backup-pre-refresh.json");
   const stagingPostPath = path.join(artifactsDir, "staging-post-import.json");
 
+  const estimatedDocCounts = await estimateCollectionDocCounts(prodDb, selectedCollections);
+  const estimatedTotalDocs = Object.values(estimatedDocCounts).reduce((acc, n) => acc + n, 0);
+  const estimatedReadCost = Math.ceil(estimatedTotalDocs * (INCLUDE_SUBCOLLECTIONS ? 1.2 : 1.0));
+  const budgetCheck = {
+    profile,
+    selectedCollections,
+    includeSubcollections: INCLUDE_SUBCOLLECTIONS,
+    estimatedDocCounts,
+    estimatedTotalDocs,
+    estimatedReadCost,
+    readBudgetDocs,
+    withinBudget: estimatedReadCost <= readBudgetDocs,
+  };
+  writeJson(path.join(artifactsDir, "preflight-budget.json"), budgetCheck);
+  if (!budgetCheck.withinBudget) {
+    throw new Error(
+      `Preflight budget check failed: estimatedReadCost=${estimatedReadCost} exceeds MIRROR_DOC_READ_BUDGET=${readBudgetDocs}. Use profile=core/reference or raise budget.`
+    );
+  }
+
   console.log("[mirror] exporting prod firestore...");
-  const prodRaw = await exportDataset(prodDb, COLLECTIONS);
+  const prodRaw = await exportDataset(prodDb, selectedCollections);
   const prodUsers = await listAllUsers(prodAuth);
 
   console.log("[mirror] sanitizing dataset...");
@@ -629,7 +685,7 @@ async function main() {
   }
 
   console.log("[mirror] creating staging backups (firestore + auth)...");
-  const stagingBackup = await exportDataset(stagingDb, COLLECTIONS);
+  const stagingBackup = await exportDataset(stagingDb, selectedCollections);
   const stagingAuthBackupRecords = await listAllUsers(stagingAuth);
   const stagingAuthBackup = stagingAuthBackupRecords.map((u) => ({
     uid: u.uid,
@@ -652,7 +708,11 @@ async function main() {
     sourceProject: PROD_PROJECT_ID,
     targetProject: STAGING_PROJECT_ID,
     firestore: {
-      collections: COLLECTIONS,
+      collections: selectedCollections,
+      collectionProfile: profile,
+      readBudgetDocs,
+      estimatedDocCounts,
+      estimatedReadCost,
       prodCounts: countDocsByTopCollection(prodRaw),
       sanitizedCounts: countDocsByTopCollection(sanitized),
       sanitizedManifestSha256: sanitizedManifest.datasetSha256,
@@ -676,7 +736,7 @@ async function main() {
   let authChanged = false;
   try {
     console.log("[mirror] wiping staging firestore collections...");
-    await wipeCollections(stagingDb, COLLECTIONS);
+    await wipeCollections(stagingDb, selectedCollections);
     firestoreWiped = true;
 
     console.log("[mirror] importing sanitized dataset into staging...");
@@ -687,7 +747,7 @@ async function main() {
     authChanged = true;
 
     console.log("[mirror] post-import verification...");
-    const stagingPost = await exportDataset(stagingDb, COLLECTIONS);
+    const stagingPost = await exportDataset(stagingDb, selectedCollections);
     const stagingPostManifest = buildDatasetManifest(stagingPost);
     writeJson(stagingPostPath, stagingPost.map((d) => ({ path: d.path, data: toSerializable(d.data) })));
 
@@ -741,7 +801,7 @@ async function main() {
     console.error("[mirror] failed, starting rollback...", err?.message || err);
     try {
       if (firestoreWiped) {
-        await wipeCollections(stagingDb, COLLECTIONS);
+        await wipeCollections(stagingDb, selectedCollections);
       }
       await importDataset(stagingDb, stagingBackup);
       if (authChanged) {

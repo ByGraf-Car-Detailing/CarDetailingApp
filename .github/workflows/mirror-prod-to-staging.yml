@@ -12,6 +12,20 @@ on:
         required: true
         default: true
         type: boolean
+      collection_profile:
+        description: "Dataset profile: all, core, reference"
+        required: true
+        default: core
+        type: choice
+        options:
+          - core
+          - reference
+          - all
+      doc_read_budget:
+        description: "Max estimated Firestore document reads for this run"
+        required: true
+        default: "20000"
+        type: string
 
 permissions:
   contents: read
@@ -80,6 +94,8 @@ jobs:
         env:
           MIRROR_CONFIRMATION: ${{ github.event.inputs.confirmation }}
           MIRROR_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          MIRROR_COLLECTION_PROFILE: ${{ github.event.inputs.collection_profile }}
+          MIRROR_DOC_READ_BUDGET: ${{ github.event.inputs.doc_read_budget }}
           MIRROR_PSEUDONYM_SALT: ${{ secrets.MIRROR_PSEUDONYM_SALT }}
           MIRROR_ARTIFACTS_DIR: artifacts/mirror
           MIRROR_INCLUDE_SUBCOLLECTIONS: "false"
