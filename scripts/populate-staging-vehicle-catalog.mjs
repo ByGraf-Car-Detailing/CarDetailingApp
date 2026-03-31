@@ -216,32 +216,28 @@ async function main() {
 
     if (mode === "makes") {
       const plan = await upsertMakes(stagingDb);
-      if (plan.operations.length > maxWrites) {
-        throw new Error(
-          `Write budget exceeded in makes mode. planned=${plan.operations.length}, max=${maxWrites}. ` +
-            `Reduce scope or increase max writes intentionally.`
-        );
-      }
-      await commitOperations(stagingDb, plan.operations);
+      const appliedOperations = plan.operations.slice(0, maxWrites);
+      const deferredOperations = Math.max(0, plan.operations.length - appliedOperations.length);
+      await commitOperations(stagingDb, appliedOperations);
       summary.result = {
         makesInspected: plan.makesInspected,
         existingMakes: plan.existingMakes,
-        makesUpserted: plan.operations.length,
+        makesPlannedUpserts: plan.operations.length,
+        makesUpserted: appliedOperations.length,
+        makesDeferred: deferredOperations,
         makesSkippedNoChange: plan.makesSkippedNoChange,
       };
     } else {
       const plan = await planModelsForActiveMakes(stagingDb);
-      if (plan.operations.length > maxWrites) {
-        throw new Error(
-          `Write budget exceeded in models_active mode. planned=${plan.operations.length}, max=${maxWrites}. ` +
-            `Reduce scope or increase max writes intentionally.`
-        );
-      }
-      await commitOperations(stagingDb, plan.operations);
+      const appliedOperations = plan.operations.slice(0, maxWrites);
+      const deferredOperations = Math.max(0, plan.operations.length - appliedOperations.length);
+      await commitOperations(stagingDb, appliedOperations);
       summary.result = {
         activeMakesCount: plan.activeMakesCount,
         inspectedModels: plan.inspectedModels,
-        modelUpserts: plan.operations.length,
+        modelPlannedUpserts: plan.operations.length,
+        modelUpserts: appliedOperations.length,
+        modelDeferred: deferredOperations,
         modelSkippedNoChange: plan.skippedNoChange,
         modelSkippedManualConflict: plan.skippedManualConflict,
       };
