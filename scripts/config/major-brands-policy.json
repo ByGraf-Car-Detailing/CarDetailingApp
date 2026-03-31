@@ -1,0 +1,80 @@
+{
+  "version": "2026.03-major-v1",
+  "cars": {
+    "core": [
+      "Toyota",
+      "Volkswagen",
+      "Ford",
+      "Chevrolet",
+      "Honda",
+      "Nissan",
+      "Hyundai",
+      "Kia",
+      "BMW",
+      "Mercedes-Benz",
+      "Audi",
+      "Renault",
+      "Peugeot",
+      "Citroen",
+      "Fiat",
+      "Skoda",
+      "SEAT",
+      "Volvo",
+      "Tesla",
+      "Mazda",
+      "Subaru",
+      "Jeep",
+      "Land Rover",
+      "Porsche",
+      "Lexus",
+      "Dacia",
+      "Opel",
+      "Alfa Romeo"
+    ]
+  },
+  "motorcycles": {
+    "core": [
+      "Honda",
+      "Yamaha",
+      "Kawasaki",
+      "Suzuki",
+      "BMW",
+      "Ducati",
+      "KTM",
+      "Triumph",
+      "Aprilia",
+      "Harley-Davidson",
+      "Royal Enfield",
+      "Indian"
+    ]
+  },
+  "aliasMap": {
+    "Mercedes-Benz": [
+      "MERCEDES BENZ",
+      "MERCEDES-BENZ"
+    ],
+    "Land Rover": [
+      "LAND ROVER",
+      "LANDROVER"
+    ],
+    "Alfa Romeo": [
+      "ALFA ROMEO"
+    ],
+    "Harley-Davidson": [
+      "HARLEY DAVIDSON",
+      "HARLEY-DAVIDSON"
+    ],
+    "Royal Enfield": [
+      "ROYAL ENFIELD"
+    ]
+  },
+  "excludePatterns": [
+    "TRAILER",
+    "INCOMPLETE",
+    "LOW SPEED",
+    "MOTORCYCLE MACHINE SHOP",
+    "CHOPPER",
+    "COACH",
+    "BUS"
+  ]
+}

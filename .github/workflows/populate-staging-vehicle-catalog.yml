@@ -1,12 +1,20 @@
-name: Populate Staging Vehicle Catalog
+name: Populate Vehicle Catalog (Major Brands)
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Type exactly: populate-catalog=staging-nhtsa"
+        description: "Type exactly: populate-catalog=<target>-nhtsa-major-v1"
         required: true
         type: string
+      target:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - prod
       mode:
         description: "Select mode"
         required: true
@@ -15,14 +23,19 @@ on:
         options:
           - makes
           - models_active
+      max_writes:
+        description: "Max Firestore writes allowed for this run"
+        required: true
+        default: "500"
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  populate-staging-vehicle-catalog:
+  populate-vehicle-catalog:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: ${{ github.event.inputs.target }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -39,30 +52,48 @@ jobs:
       - name: Validate confirmation
         shell: bash
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" != "populate-catalog=staging-nhtsa" ]; then
-            echo "Invalid confirmation value. Expected exactly: populate-catalog=staging-nhtsa"
+          TARGET="${{ github.event.inputs.target }}"
+          EXPECTED="populate-catalog=${TARGET}-nhtsa-major-v1"
+          if [ "${{ github.event.inputs.confirmation }}" != "$EXPECTED" ]; then
+            echo "Invalid confirmation value. Expected exactly: $EXPECTED"
             exit 1
           fi
 
-      - name: Materialize staging service account
+      - name: Materialize target service account
         shell: bash
         run: |
-          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa-staging.json"
-          if [ ! -s "$RUNNER_TEMP/firebase-sa-staging.json" ]; then
-            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+          TARGET="${{ github.event.inputs.target }}"
+          if [ "$TARGET" = "staging" ]; then
+            EXPECTED_PROJECT_ID="cardetailingapp-e6c95-staging"
+            SECRET_CONTENT='${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}'
+            SECRET_NAME="FIREBASE_SERVICE_ACCOUNT_STAGING"
+          elif [ "$TARGET" = "prod" ]; then
+            EXPECTED_PROJECT_ID="cardetailingapp-e6c95"
+            SECRET_CONTENT='${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}'
+            SECRET_NAME="FIREBASE_SERVICE_ACCOUNT_PROD"
+          else
+            echo "Unsupported target: $TARGET"
             exit 1
           fi
-          STAGING_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-staging.json','utf8'));process.stdout.write(j.project_id||'')")
-          if [ "$STAGING_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
-            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$STAGING_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
-            exit 1
-          fi
-          echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
 
-      - name: Populate staging catalog from NHTSA
+          printf '%s' "$SECRET_CONTENT" > "$RUNNER_TEMP/firebase-sa-target.json"
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-target.json" ]; then
+            echo "Missing or empty secret $SECRET_NAME"
+            exit 1
+          fi
+          TARGET_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-target.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$TARGET_PROJECT_ID" != "$EXPECTED_PROJECT_ID" ]; then
+            echo "$SECRET_NAME project_id mismatch: got '$TARGET_PROJECT_ID', expected '$EXPECTED_PROJECT_ID'"
+            exit 1
+          fi
+          echo "CATALOG_SA_PATH=$RUNNER_TEMP/firebase-sa-target.json" >> "$GITHUB_ENV"
+
+      - name: Populate target catalog from NHTSA major policy
         env:
           CATALOG_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          CATALOG_TARGET: ${{ github.event.inputs.target }}
           CATALOG_MODE: ${{ github.event.inputs.mode }}
-          STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
+          CATALOG_MAX_WRITES: ${{ github.event.inputs.max_writes }}
+          CATALOG_SA_PATH: ${{ env.CATALOG_SA_PATH }}
         run: node scripts/populate-staging-vehicle-catalog.mjs
 

@@ -11,6 +11,9 @@ const ROOT_COLLECTIONS = [
   "jobTypes",
   "vehicleMakes",
   "vehicleModels",
+  "jobTypeOverrides",
+  "vehicleMakeOverrides",
+  "vehicleModelOverrides",
 ];
 const PLACEHOLDER_DOC_ID = "placeholder_seed";
 

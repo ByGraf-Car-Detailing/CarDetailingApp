@@ -81,6 +81,22 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Future admin-UI foundation: override layers are readable but immutable for now.
+    match /vehicleMakeOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /vehicleModelOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /jobTypeOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
     match /syncErrors/{id} {
       allow read: if isAdmin();
       allow create: if isAllowedRole();
