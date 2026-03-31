@@ -1,0 +1,6 @@
+{
+  "firestore": {
+    "rules": "firestore.rules.prod.freeze",
+    "indexes": "firestore.indexes.json"
+  }
+}

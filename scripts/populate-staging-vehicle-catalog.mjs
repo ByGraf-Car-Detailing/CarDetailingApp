@@ -31,6 +31,10 @@ function parseTarget() {
   if (!Object.prototype.hasOwnProperty.call(PROJECTS, target)) {
     throw new Error(`Unsupported CATALOG_TARGET='${target}'. Allowed: ${Object.keys(PROJECTS).join(", ")}`);
   }
+  const allowProd = String(process.env.ALLOW_PROD_CATALOG_WRITES || "").toLowerCase() === "true";
+  if (target === "prod" && !allowProd) {
+    throw new Error("CATALOG_TARGET=prod is blocked by incident policy. Set ALLOW_PROD_CATALOG_WRITES=true only with explicit owner approval.");
+  }
   return target;
 }
 
