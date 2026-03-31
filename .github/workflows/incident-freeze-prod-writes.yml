@@ -1,0 +1,83 @@
+name: Incident Freeze Prod Writes
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: INCIDENT_FREEZE_PROD_WRITES"
+        required: true
+        type: string
+      incident_id:
+        description: "Incident identifier (example: INC-2026-03-31-01)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  freeze-prod-writes:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate incident confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "INCIDENT_FREEZE_PROD_WRITES" ]; then
+            echo "Invalid confirmation. Expected exactly: INCIDENT_FREEZE_PROD_WRITES"
+            exit 1
+          fi
+          if [ -z "${{ github.event.inputs.incident_id }}" ]; then
+            echo "incident_id is required"
+            exit 1
+          fi
+
+      - name: Authenticate prod service account
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$RUNNER_TEMP/firebase-sa-prod.json"
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-prod.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_PROD"
+            exit 1
+          fi
+          PROD_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-prod.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$PROD_PROJECT_ID" != "cardetailingapp-e6c95" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_PROD project_id mismatch: got '$PROD_PROJECT_ID', expected 'cardetailingapp-e6c95'"
+            exit 1
+          fi
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa-prod.json" >> "$GITHUB_ENV"
+
+      - name: Deploy emergency freeze rules to prod
+        run: npx firebase deploy --project prod --only firestore:rules --config firebase.prod.freeze.json
+
+      - name: Emit freeze metadata
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/freeze-report.json << 'JSON'
+          {
+            "incidentId": "${{ github.event.inputs.incident_id }}",
+            "confirmation": "${{ github.event.inputs.confirmation }}",
+            "project": "cardetailingapp-e6c95",
+            "rulesFile": "firestore.rules.prod.freeze",
+            "status": "applied"
+          }
+          JSON
+
+      - name: Upload freeze artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-write-freeze-${{ github.run_id }}
+          path: artifacts/freeze-report.json

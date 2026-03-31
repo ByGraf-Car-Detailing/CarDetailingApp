@@ -1,0 +1,79 @@
+name: Incident Forensics Prod Firestore
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: INCIDENT_FORENSICS_PROD"
+        required: true
+        type: string
+      incident_id:
+        description: "Incident identifier (example: INC-2026-03-31-01)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  forensics-prod-firestore:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "INCIDENT_FORENSICS_PROD" ]; then
+            echo "Invalid confirmation. Expected exactly: INCIDENT_FORENSICS_PROD"
+            exit 1
+          fi
+
+      - name: Authenticate prod service account
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$RUNNER_TEMP/firebase-sa-prod.json"
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-prod.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_PROD"
+            exit 1
+          fi
+          PROD_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-prod.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$PROD_PROJECT_ID" != "cardetailingapp-e6c95" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_PROD project_id mismatch: got '$PROD_PROJECT_ID', expected 'cardetailingapp-e6c95'"
+            exit 1
+          fi
+          echo "PROD_SA_PATH=$RUNNER_TEMP/firebase-sa-prod.json" >> "$GITHUB_ENV"
+
+      - name: Build Firestore forensic snapshot
+        env:
+          INCIDENT_ID: ${{ github.event.inputs.incident_id }}
+          PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
+        run: node scripts/forensics-prod-firestore.mjs
+
+      - name: Collect prod deployment baseline evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INCIDENT_ID: ${{ github.event.inputs.incident_id }}
+        shell: bash
+        run: |
+          mkdir -p "artifacts/$INCIDENT_ID"
+          gh run list --workflow "Deploy Production" --limit 30 --json databaseId,displayTitle,status,conclusion,headBranch,event,createdAt,updatedAt > "artifacts/$INCIDENT_ID/prod-deploy-runs.json"
+          git tag -l "v*.*.*" > "artifacts/$INCIDENT_ID/prod-tags.txt"
+
+      - name: Upload forensic artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-forensics-${{ github.event.inputs.incident_id }}-${{ github.run_id }}
+          path: artifacts/${{ github.event.inputs.incident_id }}

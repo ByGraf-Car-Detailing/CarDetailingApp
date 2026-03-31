@@ -14,7 +14,6 @@ on:
         type: choice
         options:
           - staging
-          - prod
       mode:
         description: "Select mode"
         required: true
@@ -53,6 +52,10 @@ jobs:
         shell: bash
         run: |
           TARGET="${{ github.event.inputs.target }}"
+          if [ "$TARGET" != "staging" ]; then
+            echo "Target '$TARGET' is blocked by incident policy. Only staging is allowed."
+            exit 1
+          fi
           EXPECTED="populate-catalog=${TARGET}-nhtsa-major-v1"
           if [ "${{ github.event.inputs.confirmation }}" != "$EXPECTED" ]; then
             echo "Invalid confirmation value. Expected exactly: $EXPECTED"

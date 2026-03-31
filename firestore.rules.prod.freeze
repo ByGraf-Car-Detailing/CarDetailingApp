@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function actorPath() {
+      return /databases/$(database)/documents/allowedUsers/$(request.auth.token.email);
+    }
+
+    function isAllowed() {
+      return isSignedIn() && exists(actorPath());
+    }
+
+    function actorRole() {
+      return isAllowed() ? get(actorPath()).data.role : null;
+    }
+
+    function isAdmin() {
+      return actorRole() == "admin";
+    }
+
+    function isStaff() {
+      return actorRole() == "staff";
+    }
+
+    function isAllowedRole() {
+      return isAdmin() || isStaff();
+    }
+
+    match /allowedUsers/{email} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /cars/{carId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /jobTypes/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /vehicleMakes/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /vehicleModels/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /vehicleMakeOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /vehicleModelOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /jobTypeOverrides/{id} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /catalogSyncLocks/{target} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+    }
+
+    match /catalogSyncJobs/{jobId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if false;
+
+      match /logs/{entryId} {
+        allow read: if isAllowedRole();
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /syncErrors/{id} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
