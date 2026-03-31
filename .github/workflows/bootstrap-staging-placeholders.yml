@@ -50,6 +50,7 @@ jobs:
             exit 1
           fi
           echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
 
       - name: Deploy Firestore rules and indexes (staging)
         run: npx firebase deploy --project staging --only firestore:rules,firestore:indexes
