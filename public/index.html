@@ -35,6 +35,37 @@
     <button id="logoutBtn" class="btn btn--ghost" data-testid="logout">Logout</button>
   </div>
 
+  <!-- 🧭 ADMIN RUNTIME TOOLS -->
+  <section id="catalogSyncSection" style="display:none;">
+    <h3>🧭 Catalog Sync Admin</h3>
+    <p>Sincronizzazione reference catalog nel runtime dell'app (Spark-safe, chunked).</p>
+    <div class="toolbar">
+      <button id="backToDashboardCatalogSyncBtn" class="btn btn--ghost">← Torna alla Dashboard</button>
+    </div>
+    <fieldset>
+      <legend>Parametri Job</legend>
+      <label for="catalogSyncTarget">Target:</label>
+      <select id="catalogSyncTarget"></select>
+      <label for="catalogSyncMaxWrites">Max writes per run:</label>
+      <input id="catalogSyncMaxWrites" type="number" min="1" value="100" />
+      <label for="catalogSyncConfirmation">Conferma (es: SYNC STAGING):</label>
+      <input id="catalogSyncConfirmation" type="text" />
+    </fieldset>
+    <div class="form-actions">
+      <button id="syncMakesBtn" class="btn btn--primary">Sync Major Makes</button>
+      <button id="syncModelsBtn" class="btn btn--primary">Sync Models</button>
+      <button id="syncReferenceBtn" class="btn btn--primary">Sync Reference Data</button>
+    </div>
+    <fieldset>
+      <legend>Verifica Job</legend>
+      <label for="syncJobIdInput">Job ID:</label>
+      <input id="syncJobIdInput" type="text" />
+      <button id="syncJobCheckBtn" type="button" class="btn btn--ghost">Controlla Job</button>
+    </fieldset>
+    <label for="catalogSyncLog">Log run:</label>
+    <textarea id="catalogSyncLog" rows="14" readonly style="width:100%;"></textarea>
+  </section>
+
   <!-- ðŸ”½ FORM CLIENTE (Wizard) -->
   <section id="clientFormSection" style="display: none;">
     <h3>âž• Aggiungi Cliente / Azienda</h3>
