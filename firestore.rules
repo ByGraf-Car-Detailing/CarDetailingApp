@@ -97,6 +97,38 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /catalogSyncLocks/{target} {
+      allow read: if isAllowedRole();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && resource.data.lockedByEmail == request.auth.token.email
+        && request.resource.data.lockedByEmail == request.auth.token.email
+        && request.resource.data.target == resource.data.target
+        && request.resource.data.jobId == resource.data.jobId;
+      allow delete: if isAdmin() && resource.data.lockedByEmail == request.auth.token.email;
+    }
+
+    match /catalogSyncJobs/{jobId} {
+      allow read: if isAllowedRole();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        && resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.actorEmail == resource.data.actorEmail
+        && request.resource.data.target == resource.data.target
+        && request.resource.data.mode == resource.data.mode
+        && request.resource.data.policyVersion == resource.data.policyVersion
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+
+      match /logs/{entryId} {
+        allow read: if isAllowedRole();
+        allow create: if isAdmin()
+          && request.resource.data.jobId == jobId
+          && request.resource.data.actorEmail == request.auth.token.email;
+        allow update, delete: if false;
+      }
+    }
+
     match /syncErrors/{id} {
       allow read: if isAdmin();
       allow create: if isAllowedRole();

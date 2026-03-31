@@ -32,10 +32,13 @@ const roleButtons = document.getElementById("roleButtons");
 const alertBanner = document.getElementById("alertBanner");
 const appointmentManageSection = document.getElementById("appointmentManageSection");
 const appointmentFormSection = document.getElementById("appointmentFormSection");
+const catalogSyncSection = document.getElementById("catalogSyncSection");
 
 const auth = getAuth();
 const db = getFirestore();
+window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
 const sectionByView = [
+  { key: "catalogSyncAdmin", el: catalogSyncSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
   { key: "nuovoAppuntamento", el: appointmentFormSection },
   { key: "gestioneVeicoli", el: vehicleManageSection },
@@ -98,6 +101,7 @@ function hideAllSections() {
   vehicleManageSection.style.display = "none";
   appointmentManageSection.style.display = "none";
   appointmentFormSection.style.display = "none";
+  catalogSyncSection.style.display = "none";
   roleButtons.style.display = "none";
 }
 
@@ -132,6 +136,17 @@ function applyCurrentViewEffects(viewKey) {
   }
   if (viewKey === "nuovoAppuntamento") {
     import("./forms/appointmentForm.js").then((m) => m.resetAppointmentForm());
+    return;
+  }
+  if (viewKey === "catalogSyncAdmin") {
+    import("./admin/catalogSyncUI.js").then((m) => m.initCatalogSyncUI());
+    const backBtn = document.getElementById("backToDashboardCatalogSyncBtn");
+    if (backBtn) {
+      backBtn.onclick = () => {
+        router.clearCurrentView();
+        showDashboard();
+      };
+    }
   }
 }
 
@@ -269,6 +284,12 @@ export async function showDashboard(userInfo = null) {
         clientManageSection.style.display = "block";
         import("./forms/clientManage.js").then(m => m.loadClients());
         router.setCurrentView("gestioneClienti");
+      });
+      addRoleButton("Catalog Sync Admin", () => {
+        hideAllSections();
+        catalogSyncSection.style.display = "block";
+        import("./admin/catalogSyncUI.js").then((m) => m.initCatalogSyncUI());
+        router.setCurrentView("catalogSyncAdmin");
       });
     }
   }

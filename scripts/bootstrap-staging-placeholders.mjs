@@ -14,6 +14,8 @@ const ROOT_COLLECTIONS = [
   "jobTypeOverrides",
   "vehicleMakeOverrides",
   "vehicleModelOverrides",
+  "catalogSyncJobs",
+  "catalogSyncLocks",
 ];
 const PLACEHOLDER_DOC_ID = "placeholder_seed";
 
