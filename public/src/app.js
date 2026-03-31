@@ -1,9 +1,5 @@
 ﻿// âœ… src/app.js
 import {
-  getAuth
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import {
-  getFirestore,
   collection,
   getDocs,
   doc,
@@ -11,6 +7,7 @@ import {
   query,
   where
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { auth, db } from "./services/authService.js";
 import { hideSteps } from "./forms/vehicleForm.js";
 import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
@@ -34,8 +31,6 @@ const appointmentManageSection = document.getElementById("appointmentManageSecti
 const appointmentFormSection = document.getElementById("appointmentFormSection");
 const catalogSyncSection = document.getElementById("catalogSyncSection");
 
-const auth = getAuth();
-const db = getFirestore();
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },

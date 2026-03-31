@@ -15,12 +15,7 @@
     import { getFirestore, getDocs, collection, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDrBjfxtshgBskV4KOaUc3lO6VI0ATNG88",
-      authDomain: "cardetailingapp-e6c95.firebaseapp.com",
-      projectId: "cardetailingapp-e6c95"
-    };
-
+    const firebaseConfig = await fetch("/__/firebase/init.json", { cache: "no-store" }).then(r => r.json());
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
