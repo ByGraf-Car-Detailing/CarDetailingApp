@@ -23,7 +23,8 @@
                     "ci:baseline": "npm run secrets:scan \u0026\u0026 npm run lint:quality \u0026\u0026 npm run test:emu",
                     "mirror:prod:staging": "node scripts/mirror-prod-to-staging.mjs",
                     "bootstrap:staging:placeholders": "node scripts/bootstrap-staging-placeholders.mjs",
-                    "sync:staging:reference": "node scripts/sync-staging-reference-data.mjs"
+                    "sync:staging:reference": "node scripts/sync-staging-reference-data.mjs",
+                    "populate:staging:catalog": "node scripts/populate-staging-vehicle-catalog.mjs"
                 },
     "repository":  {
                        "type":  "git",
