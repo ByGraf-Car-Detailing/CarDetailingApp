@@ -57,6 +57,33 @@ function showLoginState() {
   logoutBtn.style.display = "none";
 }
 
+function goToDashboard() {
+  router.clearCurrentView();
+  showDashboard();
+}
+
+function bindDashboardBackButtons() {
+  const backToDashboardIds = [
+    "backToDashboardCatalogSyncBtn",
+    "backToDashboardClientBtn",
+    "backToDashboardBtn",
+    "backToDashboardClientsBtn",
+    "backToDashboardVehiclesBtn",
+    "backToDashboardVehicleBtn",
+    "backToDashboardAppointmentsBtn",
+    "backToDashboardAppointmentBtn",
+  ];
+
+  for (const id of backToDashboardIds) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.onclick = (evt) => {
+      evt.preventDefault();
+      goToDashboard();
+    };
+  }
+}
+
 const sessionController = initSessionManager({
   auth,
   db,
@@ -70,6 +97,8 @@ const sessionController = initSessionManager({
 window.addEventListener("beforeunload", () => {
   sessionController.teardown();
 });
+
+bindDashboardBackButtons();
 
 // ðŸŽ› Funzione UI centrale
 function updateUI(userInfo) {
@@ -135,13 +164,6 @@ function applyCurrentViewEffects(viewKey) {
   }
   if (viewKey === "catalogSyncAdmin") {
     import("./admin/catalogSyncUI.js").then((m) => m.initCatalogSyncUI());
-    const backBtn = document.getElementById("backToDashboardCatalogSyncBtn");
-    if (backBtn) {
-      backBtn.onclick = () => {
-        router.clearCurrentView();
-        showDashboard();
-      };
-    }
   }
 }
 
@@ -251,13 +273,6 @@ export async function showDashboard(userInfo = null) {
     addRoleButton("Gestione appuntamenti", () => {
       hideAllSections();
       appointmentManageSection.style.display = "block";
-      const backToDash = document.getElementById("backToDashboardAppointmentsBtn");
-      if (backToDash) {
-        backToDash.onclick = () => {
-          router.clearCurrentView();
-          showDashboard();
-        };
-      }
       import("./forms/appointmentManage.js").then(m => m.loadAppointments());
       router.setCurrentView("gestioneAppuntamenti");
     });
