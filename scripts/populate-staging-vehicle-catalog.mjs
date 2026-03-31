@@ -35,6 +35,9 @@ async function upsertMakes(stagingDb) {
   const data = await fetchJson(`${NHTSA_API}/getallmakes?format=json`);
   const makes = Array.isArray(data?.Results) ? data.Results : [];
   let upserts = 0;
+  let batch = stagingDb.batch();
+  let ops = 0;
+  const BATCH_SIZE = 400;
 
   for (const make of makes) {
     const name = String(make?.Make_Name || "").trim();
@@ -42,7 +45,8 @@ async function upsertMakes(stagingDb) {
 
     const docId = normalizeId(name);
     const ref = stagingDb.collection("vehicleMakes").doc(docId);
-    await ref.set(
+    batch.set(
+      ref,
       {
         name,
         makeId: make?.Make_ID ?? null,
@@ -53,6 +57,16 @@ async function upsertMakes(stagingDb) {
       { merge: true }
     );
     upserts += 1;
+    ops += 1;
+    if (ops === BATCH_SIZE) {
+      await batch.commit();
+      batch = stagingDb.batch();
+      ops = 0;
+    }
+  }
+
+  if (ops > 0) {
+    await batch.commit();
   }
 
   return { makesUpserted: upserts };
@@ -71,6 +85,9 @@ async function getActiveMakeNames(stagingDb) {
 async function upsertModelsForActiveMakes(stagingDb) {
   const activeMakes = await getActiveMakeNames(stagingDb);
   let modelUpserts = 0;
+  let batch = stagingDb.batch();
+  let ops = 0;
+  const BATCH_SIZE = 400;
 
   for (const makeName of activeMakes) {
     const url = `${NHTSA_API}/getmodelsformake/${encodeURIComponent(makeName)}?format=json`;
@@ -82,20 +99,28 @@ async function upsertModelsForActiveMakes(stagingDb) {
       if (!modelName) continue;
 
       const docId = normalizeId(`${makeName}_${modelName}`);
-      await stagingDb
-        .collection("vehicleModels")
-        .doc(docId)
-        .set(
-          {
-            make: makeName,
-            name: modelName,
-            source: "api",
-            addedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+      batch.set(
+        stagingDb.collection("vehicleModels").doc(docId),
+        {
+          make: makeName,
+          name: modelName,
+          source: "api",
+          addedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       modelUpserts += 1;
+      ops += 1;
+      if (ops === BATCH_SIZE) {
+        await batch.commit();
+        batch = stagingDb.batch();
+        ops = 0;
+      }
     }
+  }
+
+  if (ops > 0) {
+    await batch.commit();
   }
 
   return {
