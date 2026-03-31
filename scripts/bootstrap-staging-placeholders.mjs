@@ -45,11 +45,11 @@ async function main() {
     const ref = db.doc(`${col}/${PLACEHOLDER_DOC_ID}`);
     await ref.set(
       {
-        __placeholder__: true,
-        __placeholderDocId__: PLACEHOLDER_DOC_ID,
-        __collection__: col,
-        __notes__: "technical placeholder for empty-staging bootstrap",
-        __updatedAt__: now,
+        placeholderMarker: true,
+        placeholderDocId: PLACEHOLDER_DOC_ID,
+        placeholderCollection: col,
+        placeholderNotes: "technical placeholder for empty-staging bootstrap",
+        placeholderUpdatedAt: now,
       },
       { merge: true }
     );
