@@ -1,0 +1,90 @@
+name: Sync Staging Reference Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: sync-reference=prod-to-staging"
+        required: true
+        type: string
+      dry_run:
+        description: "Run extraction only, no staging writes"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  sync-staging-reference-data:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "sync-reference=prod-to-staging" ]; then
+            echo "Invalid confirmation value. Expected exactly: sync-reference=prod-to-staging"
+            exit 1
+          fi
+
+      - name: Materialize service accounts
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$RUNNER_TEMP/firebase-sa-prod.json"
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa-staging.json"
+
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-prod.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_PROD"
+            exit 1
+          fi
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-staging.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+            exit 1
+          fi
+
+          PROD_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-prod.json','utf8'));process.stdout.write(j.project_id||'')")
+          STAGING_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-staging.json','utf8'));process.stdout.write(j.project_id||'')")
+
+          if [ "$PROD_PROJECT_ID" != "cardetailingapp-e6c95" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_PROD project_id mismatch: got '$PROD_PROJECT_ID', expected 'cardetailingapp-e6c95'"
+            exit 1
+          fi
+          if [ "$STAGING_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$STAGING_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
+            exit 1
+          fi
+
+          echo "PROD_SA_PATH=$RUNNER_TEMP/firebase-sa-prod.json" >> "$GITHUB_ENV"
+          echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+
+      - name: Sync reference data (prod -> staging)
+        env:
+          REFERENCE_SYNC_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          REFERENCE_SYNC_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          REFERENCE_SYNC_ARTIFACTS_DIR: artifacts/reference-sync
+          PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
+          STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
+        run: node scripts/sync-staging-reference-data.mjs
+
+      - name: Upload reference sync artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-reference-sync-${{ github.run_id }}
+          path: artifacts/reference-sync
+          if-no-files-found: warn
+
