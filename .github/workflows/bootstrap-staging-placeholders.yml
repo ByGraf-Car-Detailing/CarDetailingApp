@@ -1,0 +1,61 @@
+name: Bootstrap Staging Placeholders
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: bootstrap=staging-placeholder-only"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-staging-placeholders:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "bootstrap=staging-placeholder-only" ]; then
+            echo "Invalid confirmation value. Expected exactly: bootstrap=staging-placeholder-only"
+            exit 1
+          fi
+
+      - name: Materialize staging service account
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa-staging.json"
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-staging.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+            exit 1
+          fi
+          STAGING_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-staging.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$STAGING_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$STAGING_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
+            exit 1
+          fi
+          echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+
+      - name: Deploy Firestore rules and indexes (staging)
+        run: npx firebase deploy --project staging --only firestore:rules,firestore:indexes
+
+      - name: Upsert technical placeholders
+        env:
+          BOOTSTRAP_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
+        run: node scripts/bootstrap-staging-placeholders.mjs

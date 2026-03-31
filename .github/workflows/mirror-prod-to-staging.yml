@@ -7,6 +7,11 @@ on:
         description: "Type exactly: source=prod target=staging"
         required: true
         type: string
+      enable_prod_reads:
+        description: "Enable prod reads for mirror (safety gate)"
+        required: true
+        default: false
+        type: boolean
       dry_run:
         description: "Run all checks without writing staging"
         required: true
@@ -50,6 +55,10 @@ jobs:
       - name: Validate mirror confirmation
         shell: bash
         run: |
+          if [ "${{ github.event.inputs.enable_prod_reads }}" != "true" ]; then
+            echo "Prod reads are currently suspended by policy. Set enable_prod_reads=true only after explicit strategy reopen."
+            exit 1
+          fi
           if [ "${{ github.event.inputs.confirmation }}" != "source=prod target=staging" ]; then
             echo "Invalid confirmation value. Expected exactly: source=prod target=staging"
             exit 1
