@@ -15,6 +15,11 @@ on:
         options:
           - makes
           - models_active
+      max_writes:
+        description: "Max Firestore writes allowed for this run"
+        required: true
+        default: "500"
+        type: string
 
 permissions:
   contents: read
@@ -63,6 +68,7 @@ jobs:
         env:
           CATALOG_CONFIRMATION: ${{ github.event.inputs.confirmation }}
           CATALOG_MODE: ${{ github.event.inputs.mode }}
+          CATALOG_MAX_WRITES: ${{ github.event.inputs.max_writes }}
           STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
         run: node scripts/populate-staging-vehicle-catalog.mjs
 

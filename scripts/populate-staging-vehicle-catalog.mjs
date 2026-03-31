@@ -4,6 +4,8 @@ import admin from "firebase-admin";
 const STAGING_PROJECT_ID = "cardetailingapp-e6c95-staging";
 const REQUIRED_CONFIRMATION = "populate-catalog=staging-nhtsa";
 const NHTSA_API = "https://vpic.nhtsa.dot.gov/api/vehicles";
+const DEFAULT_MAX_WRITES = 1200;
+const BATCH_SIZE = 400;
 
 function parseServiceAccount(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
@@ -31,32 +33,11 @@ async function fetchJson(url) {
   return res.json();
 }
 
-async function upsertMakes(stagingDb) {
-  const data = await fetchJson(`${NHTSA_API}/getallmakes?format=json`);
-  const makes = Array.isArray(data?.Results) ? data.Results : [];
-  let upserts = 0;
+async function commitOperations(stagingDb, operations) {
   let batch = stagingDb.batch();
   let ops = 0;
-  const BATCH_SIZE = 400;
-
-  for (const make of makes) {
-    const name = String(make?.Make_Name || "").trim();
-    if (!name) continue;
-
-    const docId = normalizeId(name);
-    const ref = stagingDb.collection("vehicleMakes").doc(docId);
-    batch.set(
-      ref,
-      {
-        name,
-        makeId: make?.Make_ID ?? null,
-        active: false,
-        source: "NHTSA",
-        addedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-    upserts += 1;
+  for (const op of operations) {
+    batch.set(op.ref, op.data, { merge: true });
     ops += 1;
     if (ops === BATCH_SIZE) {
       await batch.commit();
@@ -64,12 +45,69 @@ async function upsertMakes(stagingDb) {
       ops = 0;
     }
   }
-
   if (ops > 0) {
     await batch.commit();
   }
+}
 
-  return { makesUpserted: upserts };
+function valuesDiffer(a, b) {
+  return (a ?? null) !== (b ?? null);
+}
+
+async function upsertMakes(stagingDb) {
+  const data = await fetchJson(`${NHTSA_API}/getallmakes?format=json`);
+  const makes = Array.isArray(data?.Results) ? data.Results : [];
+  const existingSnap = await stagingDb.collection("vehicleMakes").get();
+  const existingById = new Map(existingSnap.docs.map((doc) => [doc.id, doc.data()]));
+  const operations = [];
+  let skipped = 0;
+  let inspected = 0;
+  const now = new Date().toISOString();
+
+  for (const make of makes) {
+    const name = String(make?.Make_Name || "").trim();
+    if (!name) continue;
+    inspected += 1;
+
+    const docId = normalizeId(name);
+    const ref = stagingDb.collection("vehicleMakes").doc(docId);
+    const existing = existingById.get(docId);
+    const incomingMakeId = make?.Make_ID ?? null;
+
+    if (!existing) {
+      operations.push({
+        ref,
+        data: {
+          name,
+          makeId: incomingMakeId,
+          active: false,
+          source: "NHTSA",
+          addedAt: now,
+          updatedAt: now,
+        },
+      });
+      continue;
+    }
+
+    const patch = {};
+    if (valuesDiffer(existing.name, name)) patch.name = name;
+    if (valuesDiffer(existing.makeId, incomingMakeId)) patch.makeId = incomingMakeId;
+    if (valuesDiffer(existing.source, "NHTSA")) patch.source = "NHTSA";
+    if (Object.keys(patch).length === 0) {
+      skipped += 1;
+      continue;
+    }
+    patch.updatedAt = now;
+    operations.push({ ref, data: patch });
+  }
+
+  return {
+    makesInspected: inspected,
+    existingMakes: existingById.size,
+    makesPlannedUpserts: operations.length,
+    makesSkippedNoChange: skipped,
+    operations,
+  };
 }
 
 async function getActiveMakeNames(stagingDb) {
@@ -82,14 +120,17 @@ async function getActiveMakeNames(stagingDb) {
   return Array.from(new Set(names));
 }
 
-async function upsertModelsForActiveMakes(stagingDb) {
+async function planModelsForActiveMakes(stagingDb) {
   const activeMakes = await getActiveMakeNames(stagingDb);
-  let modelUpserts = 0;
-  let batch = stagingDb.batch();
-  let ops = 0;
-  const BATCH_SIZE = 400;
+  const operations = [];
+  let skippedNoChange = 0;
+  let skippedManualConflict = 0;
+  let inspectedModels = 0;
+  const now = new Date().toISOString();
 
   for (const makeName of activeMakes) {
+    const existingSnap = await stagingDb.collection("vehicleModels").where("make", "==", makeName).get();
+    const existingById = new Map(existingSnap.docs.map((doc) => [doc.id, doc.data()]));
     const url = `${NHTSA_API}/getmodelsformake/${encodeURIComponent(makeName)}?format=json`;
     const data = await fetchJson(url);
     const models = Array.isArray(data?.Results) ? data.Results : [];
@@ -97,35 +138,49 @@ async function upsertModelsForActiveMakes(stagingDb) {
     for (const model of models) {
       const modelName = String(model?.Model_Name || "").trim();
       if (!modelName) continue;
+      inspectedModels += 1;
 
       const docId = normalizeId(`${makeName}_${modelName}`);
-      batch.set(
-        stagingDb.collection("vehicleModels").doc(docId),
-        {
-          make: makeName,
-          name: modelName,
-          source: "api",
-          addedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-      modelUpserts += 1;
-      ops += 1;
-      if (ops === BATCH_SIZE) {
-        await batch.commit();
-        batch = stagingDb.batch();
-        ops = 0;
+      const existing = existingById.get(docId);
+      if (existing?.source === "manual") {
+        skippedManualConflict += 1;
+        continue;
       }
-    }
-  }
 
-  if (ops > 0) {
-    await batch.commit();
+      const ref = stagingDb.collection("vehicleModels").doc(docId);
+      if (!existing) {
+        operations.push({
+          ref,
+          data: {
+            make: makeName,
+            name: modelName,
+            source: "api",
+            addedAt: now,
+            updatedAt: now,
+          },
+        });
+        continue;
+      }
+
+      const patch = {};
+      if (valuesDiffer(existing.make, makeName)) patch.make = makeName;
+      if (valuesDiffer(existing.name, modelName)) patch.name = modelName;
+      if (valuesDiffer(existing.source, "api")) patch.source = "api";
+      if (Object.keys(patch).length === 0) {
+        skippedNoChange += 1;
+        continue;
+      }
+      patch.updatedAt = now;
+      operations.push({ ref, data: patch });
+    }
   }
 
   return {
     activeMakesCount: activeMakes.length,
-    modelUpserts,
+    inspectedModels,
+    skippedNoChange,
+    skippedManualConflict,
+    operations,
   };
 }
 
@@ -139,6 +194,10 @@ async function main() {
   if (!["makes", "models_active"].includes(mode)) {
     throw new Error(`Unsupported CATALOG_MODE='${mode}'. Allowed: makes, models_active`);
   }
+  const maxWrites = Number.parseInt(process.env.CATALOG_MAX_WRITES || `${DEFAULT_MAX_WRITES}`, 10);
+  if (!Number.isFinite(maxWrites) || maxWrites <= 0) {
+    throw new Error(`Invalid CATALOG_MAX_WRITES='${process.env.CATALOG_MAX_WRITES}'. Must be positive integer.`);
+  }
 
   const sa = parseServiceAccount(process.env.STAGING_SA_PATH);
   const app = admin.initializeApp(
@@ -150,14 +209,42 @@ async function main() {
   try {
     const summary = {
       mode,
+      maxWrites,
       startedAt: new Date().toISOString(),
       project: STAGING_PROJECT_ID,
     };
 
     if (mode === "makes") {
-      summary.result = await upsertMakes(stagingDb);
+      const plan = await upsertMakes(stagingDb);
+      if (plan.operations.length > maxWrites) {
+        throw new Error(
+          `Write budget exceeded in makes mode. planned=${plan.operations.length}, max=${maxWrites}. ` +
+            `Reduce scope or increase max writes intentionally.`
+        );
+      }
+      await commitOperations(stagingDb, plan.operations);
+      summary.result = {
+        makesInspected: plan.makesInspected,
+        existingMakes: plan.existingMakes,
+        makesUpserted: plan.operations.length,
+        makesSkippedNoChange: plan.makesSkippedNoChange,
+      };
     } else {
-      summary.result = await upsertModelsForActiveMakes(stagingDb);
+      const plan = await planModelsForActiveMakes(stagingDb);
+      if (plan.operations.length > maxWrites) {
+        throw new Error(
+          `Write budget exceeded in models_active mode. planned=${plan.operations.length}, max=${maxWrites}. ` +
+            `Reduce scope or increase max writes intentionally.`
+        );
+      }
+      await commitOperations(stagingDb, plan.operations);
+      summary.result = {
+        activeMakesCount: plan.activeMakesCount,
+        inspectedModels: plan.inspectedModels,
+        modelUpserts: plan.operations.length,
+        modelSkippedNoChange: plan.skippedNoChange,
+        modelSkippedManualConflict: plan.skippedManualConflict,
+      };
     }
 
     summary.finishedAt = new Date().toISOString();
