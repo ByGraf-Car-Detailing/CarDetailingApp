@@ -7,6 +7,10 @@ on:
         description: "Type exactly: bootstrap=staging-placeholder-only"
         required: true
         type: string
+      bootstrap_admin_email:
+        description: "Staging admin email to seed into allowedUsers with role=admin"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -35,6 +39,10 @@ jobs:
             echo "Invalid confirmation value. Expected exactly: bootstrap=staging-placeholder-only"
             exit 1
           fi
+          if [ -z "${{ github.event.inputs.bootstrap_admin_email }}" ]; then
+            echo "Missing required input bootstrap_admin_email"
+            exit 1
+          fi
 
       - name: Materialize staging service account
         shell: bash
@@ -58,5 +66,6 @@ jobs:
       - name: Upsert technical placeholders
         env:
           BOOTSTRAP_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          STAGING_BOOTSTRAP_ADMIN_EMAIL: ${{ github.event.inputs.bootstrap_admin_email }}
           STAGING_SA_PATH: ${{ env.STAGING_SA_PATH }}
         run: node scripts/bootstrap-staging-placeholders.mjs

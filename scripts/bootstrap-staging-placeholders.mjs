@@ -3,8 +3,8 @@ import admin from "firebase-admin";
 
 const STAGING_PROJECT_ID = "cardetailingapp-e6c95-staging";
 const REQUIRED_CONFIRMATION = "bootstrap=staging-placeholder-only";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROOT_COLLECTIONS = [
-  "allowedUsers",
   "clients",
   "cars",
   "appointments",
@@ -30,6 +30,16 @@ function parseServiceAccount(filePath) {
   return json;
 }
 
+function parseBootstrapAdminEmail(value) {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email || !EMAIL_REGEX.test(email)) {
+    throw new Error(
+      "Invalid STAGING_BOOTSTRAP_ADMIN_EMAIL. Provide a valid email for allowedUsers admin seed."
+    );
+  }
+  return email;
+}
+
 async function main() {
   const confirmation = process.env.BOOTSTRAP_CONFIRMATION || "";
   if (confirmation !== REQUIRED_CONFIRMATION) {
@@ -37,6 +47,7 @@ async function main() {
   }
 
   const sa = parseServiceAccount(process.env.STAGING_SA_PATH);
+  const bootstrapAdminEmail = parseBootstrapAdminEmail(process.env.STAGING_BOOTSTRAP_ADMIN_EMAIL);
   const app = admin.initializeApp(
     { credential: admin.credential.cert(sa), projectId: STAGING_PROJECT_ID },
     "bootstrap-staging"
@@ -61,7 +72,18 @@ async function main() {
     upserts += 1;
   }
 
-  console.log(`[bootstrap] placeholders upserted=${upserts}`);
+  await db.doc(`allowedUsers/${bootstrapAdminEmail}`).set(
+    {
+      role: "admin",
+      active: true,
+      seededBy: "bootstrap-staging-placeholders",
+      seededAt: now,
+    },
+    { merge: true }
+  );
+  upserts += 1;
+
+  console.log(`[bootstrap] placeholders upserted=${upserts}; adminSeed=${bootstrapAdminEmail}`);
   await app.delete();
 }
 
