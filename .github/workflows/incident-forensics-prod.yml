@@ -62,6 +62,17 @@ jobs:
           PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
         run: node scripts/forensics-prod-firestore.mjs
 
+      - name: Extract Cloud Audit write events (72h)
+        env:
+          INCIDENT_ID: ${{ github.event.inputs.incident_id }}
+          PROD_SA_PATH: ${{ env.PROD_SA_PATH }}
+        shell: bash
+        run: |
+          if ! node scripts/forensics-prod-auditlogs.mjs; then
+            mkdir -p "artifacts/${{ github.event.inputs.incident_id }}"
+            echo "Audit log extraction failed. Check IAM/Data Access logs configuration." > "artifacts/${{ github.event.inputs.incident_id }}/prod-audit-write-events-72h.ERROR.txt"
+          fi
+
       - name: Collect prod deployment baseline evidence
         env:
           GH_TOKEN: ${{ github.token }}
