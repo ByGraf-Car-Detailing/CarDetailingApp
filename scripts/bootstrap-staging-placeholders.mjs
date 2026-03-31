@@ -12,6 +12,7 @@ const ROOT_COLLECTIONS = [
   "vehicleMakes",
   "vehicleModels",
 ];
+const PLACEHOLDER_DOC_ID = "placeholder_seed";
 
 function parseServiceAccount(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
@@ -41,10 +42,11 @@ async function main() {
   let upserts = 0;
 
   for (const col of ROOT_COLLECTIONS) {
-    const ref = db.doc(`${col}/__placeholder__`);
+    const ref = db.doc(`${col}/${PLACEHOLDER_DOC_ID}`);
     await ref.set(
       {
         __placeholder__: true,
+        __placeholderDocId__: PLACEHOLDER_DOC_ID,
         __collection__: col,
         __notes__: "technical placeholder for empty-staging bootstrap",
         __updatedAt__: now,
