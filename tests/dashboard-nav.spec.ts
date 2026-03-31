@@ -34,6 +34,7 @@ test("admin: dashboard buttons -> correct sections", async ({ page }) => {
     { btn: "dash-nuovo-appuntamento",   section: "#appointmentFormSection",   back: "#backToDashboardAppointmentBtn" },
     { btn: "dash-gestione-veicoli",     section: "#vehicleManageSection",     back: "#backToDashboardVehiclesBtn" },
     { btn: "dash-gestione-clienti",     section: "#clientManageSection",      back: "#backToDashboardClientsBtn" },
+    { btn: "dash-catalog-sync-admin",   section: "#catalogSyncSection",       back: "#backToDashboardCatalogSyncBtn" },
   ];
 
   for (const c of cases) {
@@ -42,4 +43,26 @@ test("admin: dashboard buttons -> correct sections", async ({ page }) => {
     await page.locator(c.back).click();
     await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
   }
+});
+
+test("admin: restore currentView catalog sync then back returns to dashboard", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  const user = await page.evaluate(async () => {
+    const m = await import("/src/services/authService.js");
+    const u = await m.loginWithEmailPassword("admin@test.local", "Passw0rd!");
+    if (u?.role) localStorage.setItem("userRole", u.role);
+    return u;
+  });
+  expect(user).toBeTruthy();
+  await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
+
+  await page.getByTestId("dash-catalog-sync-admin").click();
+  await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
+
+  await page.reload();
+  await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
+
+  await page.locator("#backToDashboardCatalogSyncBtn").click();
+  await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
 });
