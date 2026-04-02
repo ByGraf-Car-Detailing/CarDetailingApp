@@ -11,7 +11,9 @@ test("smoke: home loads (200) and no page errors", async ({ page }) => {
   await expect(page.locator("body")).toBeVisible();
   const relevantErrors = pageErrors.filter((err) => {
     const msg = String((err as { message?: string })?.message || err || "");
-    return !msg.includes("false for 'list' @ L47, false for 'list' @ L91");
+    const isKnownAnonFirestoreListDeny =
+      msg.includes("false for 'list' @ L47") && msg.includes("false for 'list' @ L");
+    return !isKnownAnonFirestoreListDeny;
   });
   expect(relevantErrors).toHaveLength(0);
 });

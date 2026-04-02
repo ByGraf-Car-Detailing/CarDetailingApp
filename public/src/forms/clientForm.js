@@ -122,7 +122,28 @@ async function loadCompanies() {
     linkedCompanySelect.appendChild(opt);
   });
 }
-loadCompanies();
+
+function isPermissionError(err) {
+  const message = String(err?.message || "").toLowerCase();
+  return message.includes("missing or insufficient permissions");
+}
+
+async function loadCompaniesSafe() {
+  try {
+    await loadCompanies();
+  } catch (err) {
+    if (isPermissionError(err)) {
+      return;
+    }
+    throw err;
+  }
+}
+let companiesLoaded = false;
+async function ensureCompaniesLoaded() {
+  if (companiesLoaded) return;
+  await loadCompaniesSafe();
+  companiesLoaded = true;
+}
 
 // === WIZARD: Nascondi tutti gli step ===
 function hideAllSteps() {
@@ -166,6 +187,7 @@ function checkNameFields() {
   const firstName = firstNameField.value.trim();
   const lastName = lastNameField.value.trim();
   if (firstName.length >= 2 && lastName.length >= 2) {
+    ensureCompaniesLoaded().catch(() => {});
     stepCompanyLink.style.display = "block";
     // Mostra subito Email (Ditta è opzionale, default NO)
     stepEmail.style.display = "block";

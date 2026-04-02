@@ -37,32 +37,54 @@
 
   <!-- 🧭 ADMIN RUNTIME TOOLS -->
   <section id="catalogSyncSection" style="display:none;">
-    <h3>🧭 Catalog Sync Admin</h3>
-    <p>Sincronizzazione reference catalog nel runtime dell'app (Spark-safe, chunked).</p>
+    <h3>🧭 Amministrazione Catalogo</h3>
+    <p>Sincronizzazione catalogo nel runtime dell'app (Spark-safe, esecuzione a blocchi).</p>
     <div class="toolbar">
       <button id="backToDashboardCatalogSyncBtn" class="btn btn--ghost">← Torna alla Dashboard</button>
     </div>
     <fieldset>
-      <legend>Parametri Job</legend>
-      <label for="catalogSyncTarget">Target:</label>
+      <legend>Parametri sincronizzazione</legend>
+      <label for="catalogSyncTarget">Ambiente:</label>
       <select id="catalogSyncTarget"></select>
-      <label for="catalogSyncMaxWrites">Max writes per run:</label>
+      <label for="catalogSyncMaxWrites">Scritture massime per run:</label>
       <input id="catalogSyncMaxWrites" type="number" min="1" value="100" />
       <label for="catalogSyncConfirmation">Conferma (es: SYNC STAGING):</label>
       <input id="catalogSyncConfirmation" type="text" />
     </fieldset>
     <div class="form-actions">
-      <button id="syncMakesBtn" class="btn btn--primary">Sync Major Makes</button>
-      <button id="syncModelsBtn" class="btn btn--primary">Sync Models</button>
-      <button id="syncReferenceBtn" class="btn btn--primary">Sync Reference Data</button>
+      <button id="syncMakesBtn" class="btn btn--primary">Sincronizza Marche Principali</button>
+      <button id="syncModelsBtn" class="btn btn--primary">Sincronizza Modelli</button>
+      <button id="syncReferenceBtn" class="btn btn--primary">Sincronizza Dati di Riferimento</button>
     </div>
+
     <fieldset>
-      <legend>Verifica Job</legend>
+      <legend>Gestione Brand</legend>
+      <label for="brandFilterType">Filtro tipo veicolo:</label>
+      <select id="brandFilterType">
+        <option value="all">Tutte</option>
+        <option value="car">Auto</option>
+        <option value="motorcycle">Moto</option>
+        <option value="both">Auto + Moto</option>
+      </select>
+
+      <div class="toolbar">
+        <button id="refreshBrandListBtn" type="button" class="btn btn--ghost">Aggiorna elenco</button>
+      </div>
+
+      <div id="brandListContainer"></div>
+      <p class="text-muted">
+        Le eccezioni vengono salvate in <code>vehicleMakeOverrides</code>. Il risultato effettivo viene applicato a
+        <code>vehicleMakes</code> durante la sincronizzazione.
+      </p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Verifica run</legend>
       <label for="syncJobIdInput">Job ID:</label>
       <input id="syncJobIdInput" type="text" />
       <button id="syncJobCheckBtn" type="button" class="btn btn--ghost">Controlla Job</button>
     </fieldset>
-    <label for="catalogSyncLog">Log run:</label>
+    <label for="catalogSyncLog">Log sincronizzazione:</label>
     <textarea id="catalogSyncLog" rows="14" readonly style="width:100%;"></textarea>
   </section>
 

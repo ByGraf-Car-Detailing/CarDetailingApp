@@ -5,7 +5,6 @@ import {
   getDocs,
   getDoc,
   doc,
-  setDoc,
   query,
   where,
   serverTimestamp
@@ -43,6 +42,15 @@ const backToListBtn = document.getElementById("backToListVehicleBtn");
 
 // Cache duration (24h)
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2100;
+
+function parseYear(value) {
+  const n = Number.parseInt(String(value ?? "").trim(), 10);
+  if (!Number.isInteger(n)) return null;
+  if (n < MIN_YEAR || n > MAX_YEAR) return null;
+  return n;
+}
 
 function formatVIN(vin) {
   const clean = vin.replace(/\s+/g, '').toUpperCase();
@@ -76,10 +84,25 @@ async function loadCustomers() {
     customerSelect.appendChild(opt);
   });
 }
-loadCustomers();
+
+function isPermissionError(err) {
+  const message = String(err?.message || "").toLowerCase();
+  return message.includes("missing or insufficient permissions");
+}
+
+async function loadCustomersSafe() {
+  try {
+    await loadCustomers();
+  } catch (err) {
+    if (isPermissionError(err)) {
+      return;
+    }
+    throw err;
+  }
+}
 
 // Export per reload da vehicleManage
-export { loadCustomers as reloadCustomers };
+export { loadCustomersSafe as reloadCustomers };
 
 loadYears(yearSelect);
 
@@ -111,22 +134,11 @@ makeSelect.addEventListener("change", () => {
 });
 
 modelSelect.addEventListener("change", () => {
-  if (modelSelect.value === "__OTHER__") {
-    modelSelect.style.display = "none";
-    modelManual.style.display = "block";
-    modelManual.required = true;
-    modelSelect.required = false;
-    modelManual.focus();
-  } else if (modelSelect.value) {
+  if (modelSelect.value) {
     stepYear.style.display = "block";
   } else {
     stepYear.style.display = "none";
   }
-});
-
-modelManual.addEventListener("input", () => {
-  if (modelManual.value.trim().length >= 1) stepYear.style.display = "block";
-  else stepYear.style.display = "none";
 });
 
 yearSelect.addEventListener("change", () => {
@@ -205,10 +217,9 @@ form.addEventListener("submit", async (e) => {
     return;
   }
   
-  const modelValue = modelManual.style.display !== "none" ? modelManual.value.trim() : modelSelect.value;
+  const modelValue = modelSelect.value;
   if (!modelValue) {
-    const field = modelManual.style.display !== "none" ? modelManual : modelSelect;
-    highlightError(field, "❌ Seleziona o inserisci un modello.");
+    highlightError(modelSelect, "❌ Seleziona un modello dal catalogo.");
     return;
   }
   
@@ -248,13 +259,15 @@ form.addEventListener("submit", async (e) => {
 
   const [customerId, customerType] = customerSelect.value.split("|");
 
+  const parsedYear = parseYear(yearManual.style.display !== "none" ? yearManual.value : yearSelect.value);
+
   const data = {
     customerId,
     customerType,
     vehicleType: vehicleTypeSelect.value,
     brand: makeSelect.value,
-    model: modelManual.style.display !== "none" ? modelManual.value.trim() : modelSelect.value,
-    year: parseInt(yearManual.style.display !== "none" ? yearManual.value : yearSelect.value),
+    model: modelSelect.value,
+    year: parsedYear,
     color: colorSelect.value,
     chassisNumber: formattedVIN,
     licensePlate,
@@ -264,21 +277,10 @@ form.addEventListener("submit", async (e) => {
     updatedAt: serverTimestamp()
   };
 
-  // Se modello inserito manualmente, salvalo in Firestore
-  if (modelManual.style.display !== "none" && modelManual.value.trim()) {
-    const manualModel = modelManual.value.trim();
-    const make = makeSelect.value;
-    const docId = `${make.toUpperCase()}_${manualModel.toUpperCase()}`.replace(/[^A-Z0-9]/g, "_").substring(0, 100);
-    try {
-      await setDoc(doc(db, "vehicleModels", docId), {
-        make: make,
-        name: manualModel,
-        source: "manual",
-        addedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (err) {
-      console.warn("Errore salvataggio modello manuale:", err.message);
-    }
+  if (!parsedYear) {
+    const field = yearManual.style.display !== "none" ? yearManual : yearSelect;
+    highlightError(field, "❌ Anno non valido.");
+    return;
   }
 
   try {
@@ -445,6 +447,16 @@ export async function loadModels(make, targetSelect) {
     // Ordina alfabeticamente
     models.sort((a, b) => a.localeCompare(b));
 
+    if (models.length === 0) {
+      const msg = document.createElement("div");
+      msg.id = MSG_ID;
+      msg.style.color = "red";
+      msg.style.fontSize = "0.97em";
+      msg.textContent = "❌ Nessun modello disponibile per questa marca. Usa Catalog Admin.";
+      targetSelect.parentNode.appendChild(msg);
+      return;
+    }
+
     // Popola la select
     models.forEach(model => {
       const opt = document.createElement("option");
@@ -457,11 +469,7 @@ export async function loadModels(make, targetSelect) {
     console.warn("Errore caricamento modelli:", err.message);
   }
 
-  // Aggiungi SEMPRE opzione "Altro" alla fine
-  const optOther = document.createElement("option");
-  optOther.value = "__OTHER__";
-  optOther.textContent = "➕ Altro (inserisci manualmente)";
-  targetSelect.appendChild(optOther);
+  // Niente inserimento manuale da questo form: catalogo gestito da Catalog Admin.
 }
 
 // --- Popola la select degli anni ---
@@ -513,15 +521,17 @@ export async function handleVehicleFormSubmit(formNode, quickMode = false, optio
   };
 
   // Determina model e year (select o manual)
-  const modelValue = isVisible("#modelManual") ? getVal("#modelManual") : getVal("#modelSelect");
+  const modelValue = getVal("#modelSelect");
   const yearValue = isVisible("#yearManual") ? getVal("#yearManual") : getVal("#yearSelect");
 
   // Dati conformi al modello ufficiale Firestore
+  const parsedYear = parseYear(yearValue);
+
   const data = {
     brand: getVal("#makeSelect"),
     model: modelValue,
     vehicleType: getVal("#vehicleTypeSelect"),
-    year: yearValue,
+    year: parsedYear,
     color: getVal("#colorSelect"),
     chassisNumber: formatVIN(getVal("#chassisNumber")),
     licensePlate: getVal("#licensePlate"),
@@ -535,30 +545,15 @@ export async function handleVehicleFormSubmit(formNode, quickMode = false, optio
 
   // Validazione precisa
   if (!data.brand) return { error: "Marca obbligatoria", field: "#makeSelect" };
-  if (!data.model) return { error: "Modello obbligatorio", field: isVisible("#modelManual") ? "#modelManual" : "#modelSelect" };
+  if (!data.model) return { error: "Modello obbligatorio (seleziona dal catalogo)", field: "#modelSelect" };
   if (!data.vehicleType) return { error: "Tipo veicolo obbligatorio", field: "#vehicleTypeSelect" };
-  if (!data.year) return { error: "Anno obbligatorio", field: isVisible("#yearManual") ? "#yearManual" : "#yearSelect" };
+  if (!data.year) return { error: "Anno obbligatorio o non valido", field: isVisible("#yearManual") ? "#yearManual" : "#yearSelect" };
   if (!data.color) return { error: "Colore obbligatorio", field: "#colorSelect" };
   if (!data.chassisNumber || data.chassisNumber.length < 15) return { error: "Numero telaio non valido (minimo 15 caratteri)", field: "#chassisNumber" };
   if (!data.licensePlate || data.licensePlate.length < 4) return { error: "Targa non valida (minimo 4 caratteri)", field: "#licensePlate" };
   if (!data.customerId) return { error: "Cliente obbligatorio", field: "#customerSelect" };
   if (!data.customerType) return { error: "Tipo cliente obbligatorio", field: "#customerSelect" };
   if (!data.createdBy) return { error: "Impossibile determinare l'utente creatore.", field: null };
-
-  // Se modello inserito manualmente, salvalo in Firestore
-  if (isVisible("#modelManual") && modelValue) {
-    const docId = `${data.brand.toUpperCase()}_${modelValue.toUpperCase()}`.replace(/[^A-Z0-9]/g, "_").substring(0, 100);
-    try {
-      await setDoc(doc(db, "vehicleModels", docId), {
-        make: data.brand,
-        name: modelValue,
-        source: "manual",
-        addedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (err) {
-      console.warn("Errore salvataggio modello manuale:", err.message);
-    }
-  }
 
   try {
     const docRef = await addDoc(collection(db, "cars"), data);

@@ -163,7 +163,7 @@ function applyCurrentViewEffects(viewKey) {
     return;
   }
   if (viewKey === "catalogSyncAdmin") {
-    import("./admin/catalogSyncUI.js").then((m) => m.initCatalogSyncUI());
+    import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
   }
 }
 
@@ -238,7 +238,7 @@ export async function showDashboard(userInfo = null) {
     if (currentUser) {
       // Recupera nome/email da auth se mancanti
       if (!userName) {
-        userName = currentUser.displayName || "";
+        userName = currentUser.displayName || currentUser.email || "";
         localStorage.setItem("userName", userName);
       }
       if (!userEmail) {
@@ -266,7 +266,8 @@ export async function showDashboard(userInfo = null) {
     userRole = userRole || "user";
   }
 
-  welcomeMsg.textContent = `Benvenuto ${userName} (Ruolo: ${userRole})`;
+  const welcomeName = userName || userEmail || "utente";
+  welcomeMsg.textContent = `Benvenuto ${welcomeName} (Ruolo: ${userRole})`;
 
   // Bottoni dinamici (sincroni, no setTimeout)
   if (userRole === "admin" || userRole === "staff") {
@@ -298,7 +299,7 @@ export async function showDashboard(userInfo = null) {
       addRoleButton("Catalog Sync Admin", () => {
         hideAllSections();
         catalogSyncSection.style.display = "block";
-        import("./admin/catalogSyncUI.js").then((m) => m.initCatalogSyncUI());
+        import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
         router.setCurrentView("catalogSyncAdmin");
       });
     }
