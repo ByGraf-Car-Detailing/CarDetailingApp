@@ -24,7 +24,8 @@
                     "mirror:prod:staging": "node scripts/mirror-prod-to-staging.mjs",
                     "bootstrap:staging:placeholders": "node scripts/bootstrap-staging-placeholders.mjs",
                     "sync:staging:reference": "node scripts/sync-staging-reference-data.mjs",
-                    "populate:staging:catalog": "node scripts/populate-staging-vehicle-catalog.mjs"
+                    "populate:staging:catalog": "node scripts/populate-staging-vehicle-catalog.mjs",
+                    "normalize:staging:numeric-contract": "node scripts/normalize-numeric-contract.mjs"
                 },
     "repository":  {
                        "type":  "git",

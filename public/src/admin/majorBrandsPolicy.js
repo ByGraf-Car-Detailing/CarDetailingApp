@@ -1,5 +1,5 @@
 export const majorBrandsPolicy = {
-  version: "2026.03-major-v1",
+  version: "2026.04-major-v2",
   cars: {
     core: [
       "Toyota",
@@ -30,6 +30,21 @@ export const majorBrandsPolicy = {
       "Dacia",
       "Opel",
       "Alfa Romeo",
+      "Ferrari",
+      "Lamborghini",
+      "Maserati",
+      "Rolls-Royce",
+      "Bentley",
+      "Aston Martin",
+      "McLaren",
+      "BYD",
+      "MG",
+      "NIO",
+      "XPENG",
+      "Zeekr",
+      "Omoda",
+      "Jaecoo",
+      "Hongqi",
     ],
   },
   motorcycles: {
@@ -54,6 +69,14 @@ export const majorBrandsPolicy = {
     "Alfa Romeo": ["ALFA ROMEO"],
     "Harley-Davidson": ["HARLEY DAVIDSON", "HARLEY-DAVIDSON"],
     "Royal Enfield": ["ROYAL ENFIELD"],
+    "Rolls-Royce": ["ROLLS ROYCE", "ROLLS-ROYCE"],
+    "McLaren": ["MCLAREN"],
+    XPENG: ["XPENG", "XIAOPENG", "XPENG MOTORS"],
+    Hongqi: ["HONGQI", "FAW HONGQI"],
+    Omoda: ["OMODA"],
+    Jaecoo: ["JAECOO"],
+    BYD: ["B.Y.D", "BYD AUTO"],
+    MG: ["M.G.", "MORRIS GARAGES"],
   },
   excludePatterns: ["TRAILER", "INCOMPLETE", "LOW SPEED", "MOTORCYCLE MACHINE SHOP", "CHOPPER", "COACH", "BUS"],
 };

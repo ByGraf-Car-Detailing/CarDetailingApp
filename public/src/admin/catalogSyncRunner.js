@@ -16,6 +16,13 @@ import {
 import { auth, db } from "../services/authService.js";
 import { majorBrandsPolicy } from "./majorBrandsPolicy.js";
 import {
+  buildBaselineRegistry,
+  normalizeBrandKey,
+  normalizeBrandName,
+  normalizeOverrideId,
+  normalizeVehicleType,
+} from "./brandNormalization.js";
+import {
   applyPlanChunked,
   planMajorMakes,
   planMajorMakesUpserts,
@@ -23,18 +30,143 @@ import {
 } from "./catalogSyncEngine.js";
 
 const NHTSA_API = "https://vpic.nhtsa.dot.gov/api/vehicles";
+const OVERRIDE_COLLECTION = "vehicleMakeOverrides";
 const TARGET_TO_PROJECT = {
   staging: "cardetailingapp-e6c95-staging",
   prod: "cardetailingapp-e6c95",
 };
+const PROD_CATALOG_SYNC_ENABLED = window.__ENABLE_PROD_CATALOG_SYNC__ === true;
 
 const LOCK_TTL_MS = 10 * 60 * 1000;
+
+function addToPolicySet(policySet, vehicleType, brandName) {
+  if (vehicleType === "car" || vehicleType === "both") policySet.cars.add(brandName);
+  if (vehicleType === "motorcycle" || vehicleType === "both") policySet.motorcycles.add(brandName);
+}
+
+function removeFromPolicySet(policySet, vehicleType, brandName) {
+  if (vehicleType === "car" || vehicleType === "both") policySet.cars.delete(brandName);
+  if (vehicleType === "motorcycle" || vehicleType === "both") policySet.motorcycles.delete(brandName);
+}
+
+function normalizeOverrideDoc(raw) {
+  const name = normalizeBrandName(raw?.name);
+  const id = String(raw?.id || "");
+  const source = raw?.source;
+  const origin = raw?.origin || (source === "manual_override" ? "custom" : "baseline");
+  const active = raw?.active === false ? false : true;
+  const vehicleType = normalizeVehicleType(raw?.vehicleType);
+  return { ...raw, id, name, origin, active, vehicleType };
+}
+
+function collectOverrideConflicts(basePolicy, overrideDocs) {
+  const baseline = buildBaselineRegistry(basePolicy);
+  const customSeen = new Map();
+  const conflicts = [];
+
+  for (const override of overrideDocs.map(normalizeOverrideDoc)) {
+    if (!override.name || !override.id) {
+      conflicts.push({
+        code: "INVALID_OVERRIDE",
+        overrideId: override.id || null,
+        message: "Override senza id o name valido.",
+      });
+      continue;
+    }
+
+    const normalizedKey = normalizeBrandKey(override.name);
+    const normalizedId = normalizeOverrideId(override.name);
+    if (override.id !== normalizedId) {
+      conflicts.push({
+        code: "ID_MISMATCH",
+        overrideId: override.id,
+        normalizedId,
+        name: override.name,
+      });
+      continue;
+    }
+
+    const baselineHit = baseline.byKey.get(normalizedKey);
+    if (override.origin === "custom" && baselineHit) {
+      conflicts.push({
+        code: "CUSTOM_COLLIDES_BASELINE",
+        overrideId: override.id,
+        name: override.name,
+        baselineCanonical: baselineHit.canonicalName,
+      });
+      continue;
+    }
+
+    if (override.origin === "custom") {
+      const existing = customSeen.get(normalizedKey);
+      if (existing && existing !== override.id) {
+        conflicts.push({
+          code: "CUSTOM_DUPLICATE",
+          overrideId: override.id,
+          duplicateOf: existing,
+          name: override.name,
+        });
+        continue;
+      }
+      customSeen.set(normalizedKey, override.id);
+    }
+  }
+
+  return conflicts;
+}
+
+function composeEffectivePolicy(basePolicy, overrideDocsRaw) {
+  const overrideDocs = overrideDocsRaw.map(normalizeOverrideDoc);
+  const blockedCollisions = collectOverrideConflicts(basePolicy, overrideDocs);
+  const blockedIds = new Set(blockedCollisions.map((item) => item.overrideId).filter(Boolean));
+  const policySet = {
+    cars: new Set(basePolicy.cars.core || []),
+    motorcycles: new Set(basePolicy.motorcycles.core || []),
+  };
+
+  let enabledByOverride = 0;
+  let disabledByOverride = 0;
+
+  for (const override of overrideDocs) {
+    if (blockedIds.has(override.id)) continue;
+    const brandName = normalizeBrandName(override?.name);
+    if (!brandName) continue;
+    const vehicleType = normalizeVehicleType(override?.vehicleType);
+    if (override?.active !== true && override?.active !== false) continue;
+    const isActive = override.active === true;
+    if (isActive) {
+      addToPolicySet(policySet, vehicleType, brandName);
+      enabledByOverride += 1;
+    } else {
+      removeFromPolicySet(policySet, vehicleType, brandName);
+      disabledByOverride += 1;
+    }
+  }
+
+  return {
+    policy: {
+      ...basePolicy,
+      cars: { core: Array.from(policySet.cars).sort((a, b) => a.localeCompare(b)) },
+      motorcycles: { core: Array.from(policySet.motorcycles).sort((a, b) => a.localeCompare(b)) },
+    },
+    overrideStats: {
+      total: overrideDocs.length,
+      enabledByOverride,
+      disabledByOverride,
+      blockedCollisions,
+    },
+    normalizedOverrides: overrideDocs,
+  };
+}
 
 function getActorEmail() {
   return auth.currentUser?.email || null;
 }
 
 function assertRuntimeTarget(target) {
+  if (target === "prod" && !PROD_CATALOG_SYNC_ENABLED) {
+    throw new Error("Catalog sync su prod bloccato da policy. Validare staging e riaprire gate esplicitamente.");
+  }
   const currentProjectId = db.app?.options?.projectId;
   const expectedProjectId = TARGET_TO_PROJECT[target];
   if (!expectedProjectId) throw new Error(`Target non supportato: ${target}`);
@@ -154,6 +286,14 @@ async function loadExistingMakesById() {
   return map;
 }
 
+async function loadMakeOverrides() {
+  const snap = await getDocs(collection(db, OVERRIDE_COLLECTION));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+}
+
 async function loadActiveMakes() {
   const snap = await getDocs(query(collection(db, "vehicleMakes"), where("active", "==", true)));
   return snap.docs.map((d) => ({
@@ -183,12 +323,19 @@ async function applyWriteOperation(op, target) {
 }
 
 async function runMajorMakes(target, maxWrites, jobId, actorEmail) {
-  const [carsRaw, motorcyclesRaw, existingById] = await Promise.all([
+  const [carsRaw, motorcyclesRaw, existingById, overrides] = await Promise.all([
     fetchMakesForType("car"),
     fetchMakesForType("motorcycle"),
     loadExistingMakesById(),
+    loadMakeOverrides(),
   ]);
-  const majorPlan = planMajorMakes(majorBrandsPolicy, carsRaw, motorcyclesRaw);
+  const effective = composeEffectivePolicy(majorBrandsPolicy, overrides);
+  if (effective.overrideStats.blockedCollisions.length > 0) {
+    const collisionError = new Error("COLLISION_FAIL_CLOSED");
+    collisionError.details = effective.overrideStats.blockedCollisions;
+    throw collisionError;
+  }
+  const majorPlan = planMajorMakes(effective.policy, carsRaw, motorcyclesRaw);
   const upsertPlan = planMajorMakesUpserts(existingById, majorPlan.selected, majorBrandsPolicy.version);
   const chunk = await applyPlanChunked(upsertPlan.operations, maxWrites, (op) => applyWriteOperation(op, target));
 
@@ -203,6 +350,8 @@ async function runMajorMakes(target, maxWrites, jobId, actorEmail) {
     deferred: chunk.deferred,
     skipped: upsertPlan.skipped,
     existingCount: upsertPlan.existingCount,
+    overrides: effective.overrideStats,
+    blockedCollisions: effective.overrideStats.blockedCollisions,
   };
   await appendJobLog(jobId, actorEmail, "info", "major makes sync completed", summary);
   return summary;
@@ -261,8 +410,9 @@ async function runCatalogSync({ target, mode, maxWrites }) {
     return { jobId, status: "done", summary };
   } catch (error) {
     const message = error?.message || String(error);
-    await appendJobLog(jobId, actorEmail, "error", message);
-    await finishJob(jobId, "failed", { error: message });
+    const details = error?.details || null;
+    await appendJobLog(jobId, actorEmail, "error", message, details);
+    await finishJob(jobId, "failed", { error: message, blockedCollisions: details });
     throw error;
   } finally {
     await releaseLock(lockRef);
@@ -275,4 +425,37 @@ async function getCatalogJob(jobId) {
   return { id: snap.id, ...snap.data() };
 }
 
-export { runCatalogSync, getCatalogJob };
+async function getEffectivePolicyPreview() {
+  const overrides = await loadMakeOverrides();
+  const effective = composeEffectivePolicy(majorBrandsPolicy, overrides);
+  const registry = buildBaselineRegistry(majorBrandsPolicy);
+  const cars = new Set(effective.policy.cars.core || []);
+  const motorcycles = new Set(effective.policy.motorcycles.core || []);
+  const names = Array.from(new Set([...cars, ...motorcycles])).sort((a, b) => a.localeCompare(b));
+
+  const activeBrands = names.map((name) => {
+    const inCars = cars.has(name);
+    const inMotorcycles = motorcycles.has(name);
+    return {
+      name,
+      vehicleType: inCars && inMotorcycles ? "both" : inCars ? "car" : "motorcycle",
+    };
+  });
+
+  return {
+    policyVersion: majorBrandsPolicy.version,
+    overrideStats: effective.overrideStats,
+    activeBrands,
+    baselineCanonical: registry.canonical,
+    baselineKeys: Array.from(registry.byKey.keys()),
+  };
+}
+
+export {
+  getCatalogJob,
+  getEffectivePolicyPreview,
+  normalizeBrandName,
+  normalizeOverrideId,
+  normalizeVehicleType,
+  runCatalogSync,
+};

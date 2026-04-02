@@ -30,6 +30,24 @@ service cloud.firestore {
       return isAdmin() || isStaff();
     }
 
+    function isValidVehicleType(value) {
+      return value == "car" || value == "motorcycle" || value == "both";
+    }
+
+    function hasOnlyOverrideFields() {
+      return request.resource.data.keys().hasOnly([
+        "name",
+        "vehicleType",
+        "active",
+        "origin",
+        "source",
+        "createdAt",
+        "createdBy",
+        "updatedAt",
+        "updatedBy",
+      ]);
+    }
+
     function isOwnerCreated() {
       return isAllowed() && resource.data.createdBy == request.auth.token.email;
     }
@@ -81,10 +99,27 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Future admin-UI foundation: override layers are readable but immutable for now.
+    // Admin UI overrides: write allowed only to admins.
     match /vehicleMakeOverrides/{id} {
       allow read: if isAllowedRole();
-      allow create, update, delete: if false;
+      allow create: if isAdmin()
+        && hasOnlyOverrideFields()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.active is bool
+        && request.resource.data.origin in ["custom", "baseline"]
+        && isValidVehicleType(request.resource.data.vehicleType);
+      allow update: if isAdmin()
+        && hasOnlyOverrideFields()
+        && resource.data.name == request.resource.data.name
+        && (
+          (resource.data.origin in ["custom", "baseline"] && resource.data.origin == request.resource.data.origin)
+          || (!("origin" in resource.data) && resource.data.source == "manual_override" && request.resource.data.origin == "custom")
+        )
+        && request.resource.data.origin in ["custom", "baseline"]
+        && request.resource.data.active is bool
+        && isValidVehicleType(request.resource.data.vehicleType);
+      allow delete: if isAdmin();
     }
 
     match /vehicleModelOverrides/{id} {

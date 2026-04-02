@@ -6,6 +6,7 @@ import {
 import {
   doc,
   getDoc,
+  setDoc,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 let initialized = false;
@@ -45,6 +46,7 @@ export function initSessionManager({
     }
 
     let userRole = localStorage.getItem("userRole");
+    let storedDisplayName = "";
     try {
       const userRef = doc(db, "allowedUsers", user.email);
       const userSnap = await getDoc(userRef);
@@ -54,8 +56,17 @@ export function initSessionManager({
         onLoggedOut?.();
         return;
       }
-      userRole = userSnap.data().role || userRole || "user";
+      const userData = userSnap.data();
+      userRole = userData.role || userRole || "user";
+      storedDisplayName = typeof userData.displayName === "string" ? userData.displayName.trim() : "";
       localStorage.setItem("userRole", userRole);
+
+      // Best effort metadata sync: only admin can update allowedUsers by current rules.
+      const runtimeDisplayName = (user.displayName || "").trim();
+      if (userRole === "admin" && runtimeDisplayName && runtimeDisplayName !== storedDisplayName) {
+        await setDoc(userRef, { displayName: runtimeDisplayName }, { merge: true });
+        storedDisplayName = runtimeDisplayName;
+      }
     } catch (err) {
       console.error("Errore verifica ruolo:", err.message);
       clearSession({ includeCurrentView: true });
@@ -64,13 +75,14 @@ export function initSessionManager({
       return;
     }
 
+    const resolvedName = storedDisplayName || user.displayName || user.email || "";
     const userInfo = {
-      name: user.displayName,
+      name: resolvedName,
       email: user.email,
       role: userRole,
     };
 
-    localStorage.setItem("userName", user.displayName || "");
+    localStorage.setItem("userName", resolvedName);
     localStorage.setItem("userEmail", user.email || "");
 
     try {

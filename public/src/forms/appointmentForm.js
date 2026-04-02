@@ -69,6 +69,12 @@ let state = {
   noteInternal: "",
 };
 
+function toPositiveInt(value, fallback = 0) {
+  const n = Number.parseInt(String(value ?? "").trim(), 10);
+  if (!Number.isFinite(n) || Number.isNaN(n) || n < 0) return fallback;
+  return n;
+}
+
 // ▶️ Reset completo del form (wizard appointment)
 export function resetAppointmentForm() {
   msgBox.textContent = "";
@@ -1116,17 +1122,10 @@ async function renderStepVehicle() {
       
       // === WIZARD: Modello -> Anno ===
       function checkModel() {
-        const modelValue = modelSelect?.style.display !== "none" ? modelSelect?.value : modelManual?.value;
-        if (modelValue && modelValue !== "__OTHER__") {
+        const modelValue = modelSelect?.value;
+        if (modelValue) {
           stepYear.style.display = "block";
           if (module.loadYears) module.loadYears(yearSelect);
-        } else if (modelValue === "__OTHER__") {
-          // Mostra input manuale
-          modelSelect.style.display = "none";
-          modelSelect.required = false;
-          modelManual.style.display = "block";
-          modelManual.required = true;
-          modelManual.focus();
         } else {
           stepYear.style.display = "none";
           stepColor.style.display = "none";
@@ -1137,12 +1136,6 @@ async function renderStepVehicle() {
         }
       }
       if (modelSelect) modelSelect.addEventListener("change", checkModel);
-      if (modelManual) modelManual.addEventListener("input", () => {
-        if (modelManual.value.trim().length >= 1) {
-          stepYear.style.display = "block";
-          if (module.loadYears) module.loadYears(yearSelect);
-        }
-      });
       
       // === WIZARD: Anno -> Colore ===
       function checkYear() {
@@ -1308,28 +1301,34 @@ async function renderStepJobType() {
   const snap = await getDocs(collection(db, "jobTypes"));
   snap.forEach(docSnap => {
     const d = docSnap.data();
+    const normalizedDefaultPrice = toPositiveInt(d.defaultPrice, 0);
     const opt = document.createElement("option");
     opt.value = docSnap.id;
-    opt.textContent = `${d.description} (${d.defaultPrice || 0} €)`;
-    opt.setAttribute("data-price", d.defaultPrice || 0);
+    opt.textContent = `${d.description} (${normalizedDefaultPrice} €)`;
+    opt.setAttribute("data-price", String(normalizedDefaultPrice));
     jobTypeSelect.appendChild(opt);
   });
 
   jobTypeSelect.addEventListener("change", () => {
     state.jobTypeId = jobTypeSelect.value;
-    state.jobTypeData = snap.docs.find(d => d.id === state.jobTypeId)?.data() || null;
+    const rawJobTypeData = snap.docs.find(d => d.id === state.jobTypeId)?.data() || null;
+    state.jobTypeData = rawJobTypeData
+      ? { ...rawJobTypeData, defaultPrice: toPositiveInt(rawJobTypeData.defaultPrice, 0) }
+      : null;
     // Aggiorna prezzo suggerito
     if (state.jobTypeData) {
-      priceInput.value = state.jobTypeData.defaultPrice || 0;
+      priceInput.value = state.jobTypeData.defaultPrice;
+      state.price = state.jobTypeData.defaultPrice;
     } else {
       priceInput.value = "";
+      state.price = 0;
     }
     if (state.jobTypeId) renderStepDates();
     else hideAfter(stepJobType);
   });
 
   priceInput.addEventListener("input", () => {
-    state.price = Number(priceInput.value) || 0;
+    state.price = toPositiveInt(priceInput.value, 0);
   });
 
 }
@@ -1470,6 +1469,10 @@ form.addEventListener("submit", async (e) => {
     state.operatorData.operatorId = state.operatorId || "";
   }
 
+  const normalizedJobTypeData = state.jobTypeData
+    ? { ...state.jobTypeData, defaultPrice: toPositiveInt(state.jobTypeData.defaultPrice, 0) }
+    : null;
+
   const data = {
     customerId: state.customerId,
     customerData: state.customerData,
@@ -1482,8 +1485,8 @@ form.addEventListener("submit", async (e) => {
     operatorId: state.operatorId,
     operatorData: state.operatorData,
     jobTypeId: state.jobTypeId,
-    jobTypeData: state.jobTypeData,
-    price: state.price,
+    jobTypeData: normalizedJobTypeData,
+    price: toPositiveInt(state.price, 0),
     noteInternal: state.noteInternal,
     status: "programmato",
     startReception: state.dates.startReception,

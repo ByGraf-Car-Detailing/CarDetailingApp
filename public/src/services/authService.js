@@ -26,7 +26,11 @@ async function checkAllowed(user) {
   }
 
   const userData = userSnap.data();
-  return { name: user.displayName || email, email, role: userData.role || "user" };
+  const displayName =
+    (typeof userData.displayName === "string" && userData.displayName.trim()) ||
+    user.displayName ||
+    email;
+  return { name: displayName, email, role: userData.role || "user" };
 }
 
 export async function loginWithGoogle() {

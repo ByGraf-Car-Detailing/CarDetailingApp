@@ -1,16 +1,4 @@
-function normalizeKey(value) {
-  return String(value || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function normalizeDocId(value) {
-  return normalizeKey(value).slice(0, 100);
-}
+import { normalizeBrandKey, normalizeOverrideId } from "./brandNormalization.js";
 
 function valuesDiffer(a, b) {
   return (a ?? null) !== (b ?? null);
@@ -19,14 +7,14 @@ function valuesDiffer(a, b) {
 function indexMakesByName(makes) {
   const byKey = new Map();
   for (const make of makes) {
-    const key = normalizeKey(make?.MakeName);
+    const key = normalizeBrandKey(make?.MakeName);
     if (key && !byKey.has(key)) byKey.set(key, make);
   }
   return byKey;
 }
 
 function resolveFromIndex(canonicalName, index, aliasMap) {
-  const keys = [canonicalName, ...(aliasMap[canonicalName] || [])].map((v) => normalizeKey(v)).filter(Boolean);
+  const keys = [canonicalName, ...(aliasMap[canonicalName] || [])].map((v) => normalizeBrandKey(v)).filter(Boolean);
   for (const key of keys) {
     const match = index.get(key);
     if (match) return match;
@@ -82,7 +70,7 @@ function planMajorMakesUpserts(existingMakesById, selectedMajorMakes, policyVers
   let skipped = 0;
 
   for (const make of selectedMajorMakes) {
-    const docId = normalizeDocId(make.canonicalName);
+    const docId = normalizeOverrideId(make.canonicalName);
     selectedIds.add(docId);
     const existing = existingMakesById.get(docId);
 
@@ -160,7 +148,7 @@ function planModelsForActiveMakes(activeMakes, existingModelsByMake, modelsByMak
       const modelName = String(item?.Model_Name || "").trim();
       if (!modelName) continue;
       inspectedModels += 1;
-      const docId = normalizeDocId(`${makeName}_${modelName}`);
+      const docId = normalizeOverrideId(`${makeName}_${modelName}`);
       const existing = existingById.get(docId);
       if (existing?.source === "manual") {
         skippedManualConflict += 1;
@@ -220,7 +208,7 @@ async function applyPlanChunked(operations, maxWrites, applyOperation) {
 }
 
 export {
-  normalizeDocId,
+  normalizeOverrideId as normalizeDocId,
   planMajorMakes,
   planMajorMakesUpserts,
   planModelsForActiveMakes,
