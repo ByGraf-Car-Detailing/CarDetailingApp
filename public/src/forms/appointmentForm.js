@@ -1,4 +1,4 @@
-// ✅ Import servizi e moduli necessari
+//  Import servizi e moduli necessari
 import { db, auth } from "../services/authService.js";
 import { collection, addDoc, getDocs, getDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { showDashboard } from "../app.js";
@@ -75,7 +75,7 @@ function toPositiveInt(value, fallback = 0) {
   return n;
 }
 
-// ▶️ Reset completo del form (wizard appointment)
+//  Reset completo del form (wizard appointment)
 export function resetAppointmentForm() {
   msgBox.textContent = "";
   form.reset();
@@ -158,7 +158,7 @@ async function renderStepOperator() {
     const d = docSnap.data();
     const opt = document.createElement("option");
     opt.value = docSnap.id;
-    opt.textContent = `${d.role === "admin" ? "👑" : ""} ${d.displayName || docSnap.id}`;
+    opt.textContent = `${d.role === "admin" ? "" : ""} ${d.displayName || docSnap.id}`;
     select.appendChild(opt);
   });
 
@@ -216,7 +216,7 @@ async function renderStepCustomer() {
 
   // Carica clienti attivi del tipo selezionato
   async function populateCustomers(selectIdToSelect = null) {
-    customerSelect.innerHTML = `<option value="">-- Seleziona cliente --</option><option value="__ADD__">➕ Aggiungi cliente</option>`;
+    customerSelect.innerHTML = `<option value="">-- Seleziona cliente --</option><option value="__ADD__"> Aggiungi cliente</option>`;
     const q = query(
       collection(db, "clients"),
       where("type", "==", state.customerType),
@@ -273,7 +273,7 @@ function openQuickClientModal(onSuccessCallback) {
     const container = document.createElement("div");
     container.innerHTML = `<div id="quickClientFormWrapper"></div>`;
     openModal({
-      title: "➕ Aggiungi Cliente",
+      title: " Aggiungi Cliente",
       content: container,
       onClose: () => {},
       noModalCancelBtn: true
@@ -447,7 +447,7 @@ function openQuickClientModal(onSuccessCallback) {
       }
       if (prefixSelect) prefixSelect.addEventListener("change", checkPhone);
       
-      // Filtro CAP numerico + scroll a Città
+      // Filtro CAP numerico + scroll a Citt
       if (capField) {
         capField.addEventListener("input", (e) => {
           e.target.value = e.target.value.replace(/[^0-9]/g, "");
@@ -569,7 +569,7 @@ function openQuickClientModal(onSuccessCallback) {
       } else {
         // Dopo X tentativi, selezione forzata (soft error)
         customerSelect.value = "";
-        if (addCustomerSuccessMsg) addCustomerSuccessMsg.textContent = "❗Cliente creato, ma non ancora visibile. Riprova tra qualche secondo.";
+        if (addCustomerSuccessMsg) addCustomerSuccessMsg.textContent = "Cliente creato, ma non ancora visibile. Riprova tra qualche secondo.";
       }
     };
     checkAndSelect();
@@ -589,7 +589,7 @@ async function renderStepContactPerson() {
   
     // Carica contatti aziendali collegati all'azienda scelta
     async function populateContacts(selectIdToSelect = null) {
-      contactSelect.innerHTML = `<option value="">-- Seleziona contatto --</option><option value="__ADD__">➕ Aggiungi contatto</option>`;
+      contactSelect.innerHTML = `<option value="">-- Seleziona contatto --</option><option value="__ADD__"> Aggiungi contatto</option>`;
       const q = query(
         collection(db, "clients"),
         where("isContact", "==", true),
@@ -641,7 +641,7 @@ async function renderStepContactPerson() {
     const container = document.createElement("div");
     container.innerHTML = `<div id="quickContactFormWrapper"></div>`;
     openModal({
-      title: "➕ Aggiungi Contatto aziendale",
+      title: " Aggiungi Contatto aziendale",
       content: container,
       onClose: () => {},
       noModalCancelBtn: true
@@ -798,7 +798,7 @@ async function renderStepContactPerson() {
       }
       if (prefixSelect) prefixSelect.addEventListener("change", checkPhone);
       
-      // Filtro CAP numerico + scroll a Città
+      // Filtro CAP numerico + scroll a Citt
       if (capField) {
         capField.addEventListener("input", (e) => {
           e.target.value = e.target.value.replace(/[^0-9]/g, "");
@@ -915,7 +915,7 @@ async function renderStepVehicle() {
   
     // Carica veicoli attivi del cliente selezionato
     async function populateVehicles(selectIdToSelect = null) {
-      vehicleSelect.innerHTML = `<option value="">-- Seleziona veicolo --</option><option value="__ADD__">➕ Aggiungi veicolo</option>`;
+      vehicleSelect.innerHTML = `<option value="">-- Seleziona veicolo --</option><option value="__ADD__"> Aggiungi veicolo</option>`;
       const q = query(
         collection(db, "cars"),
         where("customerId", "==", state.customerId)
@@ -965,7 +965,7 @@ async function renderStepVehicle() {
     const container = document.createElement("div");
     container.innerHTML = `<div id="quickVehicleFormWrapper"></div>`;
     openModal({
-      title: "➕ Aggiungi Veicolo",
+      title: " Aggiungi Veicolo",
       content: container,
       onClose: () => {},
       noModalCancelBtn: true
@@ -1290,7 +1290,7 @@ async function renderStepJobType() {
   stepJobType.innerHTML = `
     <label>Tipo lavoro:</label>
     <select id="jobTypeSelectAppointment" required></select>
-    <input type="number" id="priceInputAppointment" min="0" placeholder="Prezzo (€)" style="margin-left:10px; width:110px;" />
+    <input type="number" id="priceInputAppointment" min="0" placeholder="Prezzo ()" style="margin-left:10px; width:110px;" />
   `;
   stepJobType.style.display = "block";
   const jobTypeSelect = document.getElementById("jobTypeSelectAppointment");
@@ -1304,7 +1304,7 @@ async function renderStepJobType() {
     const normalizedDefaultPrice = toPositiveInt(d.defaultPrice, 0);
     const opt = document.createElement("option");
     opt.value = docSnap.id;
-    opt.textContent = `${d.description} (${normalizedDefaultPrice} €)`;
+    opt.textContent = `${d.description} (${normalizedDefaultPrice} )`;
     opt.setAttribute("data-price", String(normalizedDefaultPrice));
     jobTypeSelect.appendChild(opt);
   });
@@ -1458,7 +1458,7 @@ form.addEventListener("submit", async (e) => {
     !state.dates.startWork || !state.dates.endWork ||
     !state.dates.startDelivery || !state.dates.endDelivery
   ) {
-    msgBox.textContent = "❌ Compila tutti i campi obbligatori.";
+    msgBox.textContent = " Compila tutti i campi obbligatori.";
     return;
   }
 
@@ -1504,7 +1504,7 @@ form.addEventListener("submit", async (e) => {
 
   try {
     await addDoc(collection(db, "appointments"), data);
-    msgBox.textContent = "✅ Appuntamento creato con successo!";
+    msgBox.textContent = " Appuntamento creato con successo!";
     setTimeout(() => {
       resetAppointmentForm();
       formSection.style.display = "none";
@@ -1513,6 +1513,6 @@ form.addEventListener("submit", async (e) => {
     }, 1000);
   } catch (err) {
     console.error("Errore salvataggio appuntamento:", err.message);
-    msgBox.textContent = "❌ Errore durante il salvataggio. Riprova.";
+    msgBox.textContent = " Errore durante il salvataggio. Riprova.";
   }
 });

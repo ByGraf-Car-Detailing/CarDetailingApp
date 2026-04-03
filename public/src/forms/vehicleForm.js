@@ -205,45 +205,45 @@ form.addEventListener("submit", async (e) => {
 
   // Validazione con evidenziazione
   if (!customerSelect.value) {
-    highlightError(customerSelect, "❌ Seleziona un cliente.");
+    highlightError(customerSelect, " Seleziona un cliente.");
     return;
   }
   if (!vehicleTypeSelect.value) {
-    highlightError(vehicleTypeSelect, "❌ Seleziona un tipo veicolo.");
+    highlightError(vehicleTypeSelect, " Seleziona un tipo veicolo.");
     return;
   }
   if (!makeSelect.value) {
-    highlightError(makeSelect, "❌ Seleziona una marca.");
+    highlightError(makeSelect, " Seleziona una marca.");
     return;
   }
   
   const modelValue = modelSelect.value;
   if (!modelValue) {
-    highlightError(modelSelect, "❌ Seleziona un modello dal catalogo.");
+    highlightError(modelSelect, " Seleziona un modello dal catalogo.");
     return;
   }
   
   const yearValue = yearManual.style.display !== "none" ? yearManual.value : yearSelect.value;
   if (!yearValue) {
     const field = yearManual.style.display !== "none" ? yearManual : yearSelect;
-    highlightError(field, "❌ Seleziona o inserisci un anno.");
+    highlightError(field, " Seleziona o inserisci un anno.");
     return;
   }
   
   if (!colorSelect.value) {
-    highlightError(colorSelect, "❌ Seleziona un colore.");
+    highlightError(colorSelect, " Seleziona un colore.");
     return;
   }
 
   const chassisNumber = chassisInput.value.trim();
   if (chassisNumber.length < 15) {
-    highlightError(chassisInput, "❌ Numero telaio non valido (minimo 15 caratteri).");
+    highlightError(chassisInput, " Numero telaio non valido (minimo 15 caratteri).");
     return;
   }
   
   const licensePlate = licenseInput.value.trim().toUpperCase();
   if (licensePlate.length < 4) {
-    highlightError(licenseInput, "❌ Targa non valida (minimo 4 caratteri).");
+    highlightError(licenseInput, " Targa non valida (minimo 4 caratteri).");
     return;
   }
 
@@ -253,7 +253,7 @@ form.addEventListener("submit", async (e) => {
   const q = query(collection(db, "cars"), where("chassisNumber", "==", chassisNumber));
   const snap = await getDocs(q);
   if (!snap.empty) {
-    msgBox.textContent = "❌ Questo numero telaio è già registrato.";
+    msgBox.textContent = " Questo numero telaio  gi registrato.";
     return;
   }
 
@@ -279,18 +279,18 @@ form.addEventListener("submit", async (e) => {
 
   if (!parsedYear) {
     const field = yearManual.style.display !== "none" ? yearManual : yearSelect;
-    highlightError(field, "❌ Anno non valido.");
+    highlightError(field, " Anno non valido.");
     return;
   }
 
   try {
     await addDoc(collection(db, "cars"), data);
-    msgBox.textContent = "✅ Veicolo salvato con successo.";
+    msgBox.textContent = " Veicolo salvato con successo.";
     form.reset();
     hideSteps();
   } catch (err) {
     console.error("Errore salvataggio:", err.message);
-    msgBox.textContent = "❌ Errore durante il salvataggio.";
+    msgBox.textContent = " Errore durante il salvataggio.";
   }
 });
 
@@ -389,7 +389,7 @@ export async function loadMakes(targetSelect) {
       msg.id = MSG_ID;
       msg.style.color = "red";
       msg.style.fontSize = "0.97em";
-      msg.textContent = "❌ Nessuna marca attiva. Contatta l'amministratore.";
+      msg.textContent = " Nessuna marca attiva. Contatta l'amministratore.";
       targetSelect.parentNode.appendChild(msg);
       return;
     }
@@ -408,7 +408,7 @@ export async function loadMakes(targetSelect) {
     msg.id = MSG_ID;
     msg.style.color = "red";
     msg.style.fontSize = "0.97em";
-    msg.textContent = "❌ Errore caricamento marche. Riprova più tardi.";
+    msg.textContent = " Errore caricamento marche. Riprova pi tardi.";
     targetSelect.parentNode.appendChild(msg);
   }
 }
@@ -452,7 +452,7 @@ export async function loadModels(make, targetSelect) {
       msg.id = MSG_ID;
       msg.style.color = "red";
       msg.style.fontSize = "0.97em";
-      msg.textContent = "❌ Nessun modello disponibile per questa marca. Usa Catalog Admin.";
+      msg.textContent = " Nessun modello disponibile per questa marca. Usa Catalog Admin.";
       targetSelect.parentNode.appendChild(msg);
       return;
     }
@@ -497,7 +497,7 @@ export function loadYears(targetSelect) {
   // Aggiungi opzione "Altro"
   const optOther = document.createElement("option");
   optOther.value = "__OTHER__";
-  optOther.textContent = "➕ Altro (inserisci manualmente)";
+  optOther.textContent = " Altro (inserisci manualmente)";
   targetSelect.appendChild(optOther);
 }
 

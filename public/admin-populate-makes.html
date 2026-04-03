@@ -6,7 +6,7 @@
 </head>
 <body>
   <h2>Popola collezione vehicleMakes</h2>
-  <button id="startBtn">▶️ Avvia popolamento</button>
+  <button id="startBtn"> Avvia popolamento</button>
   <pre id="log" style="background:#222;color:#0f0;padding:15px;height:400px;overflow:auto;"></pre>
 
   <script type="module">
@@ -28,23 +28,23 @@
       log.textContent = "";
 
       try {
-        print("📥 Fetching marche da API NHTSA...");
+        print(" Fetching marche da API NHTSA...");
         const resp = await fetch("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json");
         const data = await resp.json();
 
         if (!data.Results || !Array.isArray(data.Results)) {
-          print("❌ Errore: risposta API non valida");
+          print(" Errore: risposta API non valida");
           return;
         }
 
         const makes = data.Results.map(m => m.Make_Name).filter(Boolean);
-        print(`✅ Trovate ${makes.length} marche`);
+        print(` Trovate ${makes.length} marche`);
 
-        print("🔍 Controllo marche esistenti...");
+        print(" Controllo marche esistenti...");
         const existingSnap = await getDocs(collection(db, "vehicleMakes"));
         const existingNames = new Set();
         existingSnap.forEach(d => existingNames.add(d.data().name?.toUpperCase()));
-        print(`📋 Marche già presenti: ${existingNames.size}`);
+        print(` Marche gi presenti: ${existingNames.size}`);
 
         let added = 0;
         let skipped = 0;
@@ -65,17 +65,17 @@
           added++;
 
           if (added % 500 === 0) {
-            print(`⏳ Inserite ${added} marche...`);
+            print(` Inserite ${added} marche...`);
           }
         }
 
-        print(`\n✅ Completato!`);
+        print(`\n Completato!`);
         print(`   Aggiunte: ${added}`);
-        print(`   Saltate (già esistenti): ${skipped}`);
-        print(`\n👉 Ora attiva le marche in Firebase Console`);
+        print(`   Saltate (gi esistenti): ${skipped}`);
+        print(`\n Ora attiva le marche in Firebase Console`);
 
       } catch (err) {
-        print("❌ Errore: " + err.message);
+        print(" Errore: " + err.message);
       }
 
       document.getElementById("startBtn").disabled = false;

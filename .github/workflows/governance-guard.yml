@@ -7,6 +7,55 @@ on:
     branches: [ main ]
 
 jobs:
+  coworking-proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate mandatory coworking trace in PR body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || "";
+            const required = [
+              "codex_session_id:",
+              "claude_session_id:",
+              "timeout_ms:",
+              "recommendation:",
+              "residual_risk:"
+            ];
+            const missing = required.filter((k) => !body.includes(k));
+            if (missing.length) {
+              core.setFailed(`Missing coworking trace fields in PR body: ${missing.join(", ")}`);
+              return;
+            }
+            const timeoutMatch = body.match(/timeout_ms:\s*(\d+)/i);
+            if (!timeoutMatch || Number(timeoutMatch[1]) < 600000) {
+              core.setFailed("timeout_ms is missing or below mandatory minimum (600000).");
+              return;
+            }
+            const valueByKey = (key) => {
+              const r = new RegExp(`${key}\\s*:\\s*(.+)`, "i");
+              const m = body.match(r);
+              return m ? m[1].trim() : "";
+            };
+            const bannedValue = /^(N\/A|TBD|placeholder|none|unknown)$/i;
+            const keysToValidate = [
+              "codex_session_id",
+              "claude_session_id",
+              "question",
+              "options_considered",
+              "recommendation",
+              "residual_risk"
+            ];
+            for (const key of keysToValidate) {
+              const value = valueByKey(key);
+              if (!value || bannedValue.test(value)) {
+                core.setFailed(`Coworking trace field '${key}' is empty or placeholder.`);
+                return;
+              }
+            }
+            core.info("Coworking trace validation passed.");
+
   validate-governance:
     runs-on: ubuntu-latest
     steps:

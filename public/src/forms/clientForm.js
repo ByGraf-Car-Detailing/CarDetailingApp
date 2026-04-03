@@ -189,7 +189,7 @@ function checkNameFields() {
   if (firstName.length >= 2 && lastName.length >= 2) {
     ensureCompaniesLoaded().catch(() => {});
     stepCompanyLink.style.display = "block";
-    // Mostra subito Email (Ditta è opzionale, default NO)
+    // Mostra subito Email (Ditta  opzionale, default NO)
     stepEmail.style.display = "block";
   } else {
     stepCompanyLink.style.display = "none";
@@ -272,10 +272,10 @@ phoneNumberField.addEventListener("input", (e) => {
   checkPhone();
 });
 
-// === CAP: Filtro solo numeri + scroll a Città + checkAddress ===
+// === CAP: Filtro solo numeri + scroll a Citt + checkAddress ===
 capField.addEventListener("input", (e) => {
   e.target.value = e.target.value.replace(/[^0-9]/g, "");
-  // Scroll a Città quando CAP è valido
+  // Scroll a Citt quando CAP  valido
   if (e.target.value.length >= 4) {
     setTimeout(() => cityField.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
   }
@@ -313,7 +313,7 @@ function checkAddress() {
 }
 streetField.addEventListener("input", checkAddress);
 streetNumberField.addEventListener("input", checkAddress);
-// capField listener già definito sopra con filtro numerico
+// capField listener gi definito sopra con filtro numerico
 cityField.addEventListener("input", () => {
   autoCapitalize(cityField);
   checkAddress();
@@ -408,26 +408,26 @@ export async function handleClientFormSubmit(formNode, quickMode = false, option
     };
 
     // Validazioni campi obbligatori
-    if (!type) return { error: "❌ Seleziona il tipo cliente.", field: "#clientType" };
-    if (type === "person" && !data.firstName) return { error: "❌ Inserisci il nome.", field: "#firstName" };
-    if (type === "person" && !data.lastName) return { error: "❌ Inserisci il cognome.", field: "#lastName" };
-    if (type === "company" && !data.companyName) return { error: "❌ Inserisci ragione sociale.", field: "#companyName" };
-    if (!email) return { error: "❌ Inserisci email.", field: "#email" };
-    if (!phonePrefix) return { error: "❌ Seleziona il prefisso telefonico.", field: "#phonePrefix" };
-    if (!phoneNumber) return { error: "❌ Inserisci il numero di telefono.", field: "#phoneNumber" };
-    if (!address.street) return { error: "❌ Inserisci la via.", field: "#street" };
-    if (!address.number) return { error: "❌ Inserisci il numero civico.", field: "#streetNumber" };
-    if (!address.cap) return { error: "❌ Inserisci il CAP.", field: "#cap" };
-    if (!address.city) return { error: "❌ Inserisci la città.", field: "#city" };
+    if (!type) return { error: " Seleziona il tipo cliente.", field: "#clientType" };
+    if (type === "person" && !data.firstName) return { error: " Inserisci il nome.", field: "#firstName" };
+    if (type === "person" && !data.lastName) return { error: " Inserisci il cognome.", field: "#lastName" };
+    if (type === "company" && !data.companyName) return { error: " Inserisci ragione sociale.", field: "#companyName" };
+    if (!email) return { error: " Inserisci email.", field: "#email" };
+    if (!phonePrefix) return { error: " Seleziona il prefisso telefonico.", field: "#phonePrefix" };
+    if (!phoneNumber) return { error: " Inserisci il numero di telefono.", field: "#phoneNumber" };
+    if (!address.street) return { error: " Inserisci la via.", field: "#street" };
+    if (!address.number) return { error: " Inserisci il numero civico.", field: "#streetNumber" };
+    if (!address.cap) return { error: " Inserisci il CAP.", field: "#cap" };
+    if (!address.city) return { error: " Inserisci la citt.", field: "#city" };
     
     // P.IVA obbligatoria per Azienda
-    if (type === "company" && !data.fiscalCode) return { error: "❌ Inserisci P.IVA / Codice Fiscale per l'azienda.", field: "#fiscalCode" };
+    if (type === "company" && !data.fiscalCode) return { error: " Inserisci P.IVA / Codice Fiscale per l'azienda.", field: "#fiscalCode" };
 
     // Validazione asincrona azienda
     if (type === "person" && isContact && companyId) {
       const ref = doc(db, "clients", companyId);
       const snap = await getDoc(ref);
-      if (!snap.exists()) return { error: "❌ Azienda selezionata non trovata.", field: "#linkedCompanyId" };
+      if (!snap.exists()) return { error: " Azienda selezionata non trovata.", field: "#linkedCompanyId" };
     }
 
     // Verifica duplicati
@@ -435,8 +435,8 @@ export async function handleClientFormSubmit(formNode, quickMode = false, option
       getDocs(query(collection(db, "clients"), where("email", "==", email))),
       getDocs(query(collection(db, "clients"), where("phone", "==", phone))),
     ]);
-    if (!emailClients.empty) return { error: "❌ Email già esistente.", field: "#email" };
-    if (!phoneClients.empty) return { error: "❌ Telefono già registrato.", field: "#phoneNumber" };
+    if (!emailClients.empty) return { error: " Email gi esistente.", field: "#email" };
+    if (!phoneClients.empty) return { error: " Telefono gi registrato.", field: "#phoneNumber" };
 
     // Duplicati per nome+telefono, nome+indirizzo
     if (type === "person") {
@@ -450,7 +450,7 @@ export async function handleClientFormSubmit(formNode, quickMode = false, option
           c.lastName?.toLowerCase() === lname
         ) {
           if (c.phone === phone) {
-            return { error: "❌ Esiste già un cliente con stesso nome e telefono.", field: "#phoneNumber" };
+            return { error: " Esiste gi un cliente con stesso nome e telefono.", field: "#phoneNumber" };
           }
           if (
             c.address?.street === address.street &&
@@ -458,7 +458,7 @@ export async function handleClientFormSubmit(formNode, quickMode = false, option
             c.address?.cap === address.cap &&
             c.address?.city === address.city
           ) {
-            return { error: "❌ Esiste già un cliente con stesso nome e indirizzo.", field: "#street" };
+            return { error: " Esiste gi un cliente con stesso nome e indirizzo.", field: "#street" };
           }
         }
       }
@@ -469,11 +469,11 @@ export async function handleClientFormSubmit(formNode, quickMode = false, option
     if (quickMode) {
       return { newClientId: docRef.id };
     } else {
-      msgBox.textContent = "✅ Cliente salvato con successo.";
+      msgBox.textContent = " Cliente salvato con successo.";
       resetClientForm();
     }
   } catch (err) {
-    return { error: "❌ Errore: " + (err.message || "sconosciuto") };
+    return { error: " Errore: " + (err.message || "sconosciuto") };
   }
 }
 
@@ -497,7 +497,7 @@ form.addEventListener("submit", async (e) => {
     }
     return;
   }
-  msgBox.textContent = "✅ Cliente salvato con successo.";
+  msgBox.textContent = " Cliente salvato con successo.";
   setTimeout(() => {
     document.getElementById("clientFormSection").style.display = "none";
     document.getElementById("clientManageSection").style.display = "block";

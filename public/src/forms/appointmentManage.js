@@ -1,5 +1,5 @@
 // /src/forms/appointmentManage.js
-// Car Detailing App — Gestione Appuntamenti
+// Car Detailing App  Gestione Appuntamenti
 
 import { db, auth } from "../services/authService.js";
 import {
@@ -177,7 +177,7 @@ export async function loadAppointments() {
         <th>Cliente</th>
         <th>Veicolo</th>
         <th>Targa</th>
-        <th>N° TELAIO</th>
+        <th>N TELAIO</th>
         <th>Tipo Lavoro</th>
         <th>Operatore</th>
         <th>Stato</th>
@@ -204,10 +204,10 @@ export async function loadAppointments() {
   
       let actions = "";
       if ((userRole === "admin") || (userRole === "staff" && d.createdBy === userEmail)) {
-        actions += `<button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}">✏️</button>`;
+        actions += `<button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}"></button>`;
       }
       if (userRole === "admin") {
-        actions += `<button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}">🗑️</button>`;
+        actions += `<button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}"></button>`;
       }
   
       const tr = document.createElement("tr");
@@ -263,7 +263,7 @@ export async function loadAppointments() {
     const data = snap.data();
     const canEditAll = userRole === "admin" || (userRole === "staff" && data.createdBy === userEmail);
 
-    editSection.innerHTML = `<h3>✏️ Modifica Appuntamento</h3>
+    editSection.innerHTML = `<h3> Modifica Appuntamento</h3>
       <form id="appointmentEditForm">
         <label>Cliente:</label>
         <input type="text" value="${formatCliente(data.customerData)}" readonly />
@@ -325,7 +325,7 @@ export async function loadAppointments() {
         const endDelivery = document.getElementById("editEndDelivery").value;
 
         if (!startReception || !endReception || !startWork || !endWork || !startDelivery || !endDelivery) {
-          msgBox.textContent = "❌ Compila tutte le date/ore.";
+          msgBox.textContent = " Compila tutte le date/ore.";
           return;
         }
 
@@ -335,12 +335,12 @@ export async function loadAppointments() {
           (new Date(startDelivery) < new Date(endWork)) ||
           (new Date(endDelivery) < new Date(startDelivery))
         ) {
-          msgBox.textContent = "❌ Ordine delle date/ore non valido.";
+          msgBox.textContent = " Ordine delle date/ore non valido.";
           return;
         }
 
         if (((new Date(endWork) - new Date(startWork)) / (1000 * 60 * 60)) < 2) {
-          msgBox.textContent = "❌ Durata lavorazione minima: 2h.";
+          msgBox.textContent = " Durata lavorazione minima: 2h.";
           return;
         }
 
@@ -368,7 +368,7 @@ export async function loadAppointments() {
         try {
           await updateDoc(ref, updates);
           msgBox.className = "form-msg form-msg--success";
-          msgBox.textContent = "✅ Appuntamento aggiornato.";
+          msgBox.textContent = " Appuntamento aggiornato.";
           setTimeout(() => {
             editSection.style.display = "none";
             manageSection.style.display = "block";
@@ -376,7 +376,7 @@ export async function loadAppointments() {
           }, 650);
         } catch (err) {
           msgBox.className = "form-msg form-msg--error";
-          msgBox.textContent = "❌ Errore durante il salvataggio.";
+          msgBox.textContent = " Errore durante il salvataggio.";
         }
       };
     }

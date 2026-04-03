@@ -1,7 +1,7 @@
-﻿/**
+/**
  * Carica questo file PRIMA di ogni uso di Auth/Firestore.
  * Attiva emulatori quando:
- *  - hostname è localhost/127.0.0.1
+ *  - hostname  localhost/127.0.0.1
  *  - oppure window.__USE_EMULATORS__ = true
  */
 export function enableFirebaseEmulators(auth, db) {
