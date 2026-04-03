@@ -1,0 +1,45 @@
+param()
+
+$ErrorActionPreference = "Stop"
+
+function Assert-Contains {
+  param(
+    [string]$Path,
+    [string]$Pattern,
+    [string]$Label
+  )
+
+  if (-not (Test-Path $Path)) {
+    Write-Error "Missing file: $Path"
+    exit 1
+  }
+
+  $content = Get-Content -Path $Path -Raw
+  if ($content -notmatch [regex]::Escape($Pattern)) {
+    Write-Error "FAILED [$Label] -> pattern not found: $Pattern"
+    exit 1
+  }
+
+  Write-Host "PASS   [$Label]"
+}
+
+Write-Host "Running app governance checks..."
+
+Assert-Contains -Path "AGENTS.md" -Pattern "Version: 2.1" -Label "AGENTS version"
+Assert-Contains -Path "AGENTS.md" -Pattern "SESSION_BINDING_1_TO_1" -Label "AGENTS session binding"
+Assert-Contains -Path "AGENTS.md" -Pattern "CLAUDE_TIMEOUT_MIN_10M" -Label "AGENTS timeout policy"
+Assert-Contains -Path "AGENTS.md" -Pattern "PROD_SAFE_FINAL_CONTROL" -Label "AGENTS prod-safe control"
+
+Assert-Contains -Path ".github/workflows/ci.yml" -Pattern "quality" -Label "CI quality job"
+Assert-Contains -Path ".github/workflows/governance-guard.yml" -Pattern "validate-governance" -Label "Governance guard workflow"
+Assert-Contains -Path "GOVERNANCE_POLICY.md" -Pattern "validate-governance" -Label "Policy references governance guard"
+
+# Secrets tracked check (.env* tracked files are forbidden)
+$trackedEnv = git ls-files | Where-Object { $_ -match '(^|/)\.env' }
+if ($trackedEnv) {
+  Write-Error "FAILED [Tracked env files] -> forbidden tracked .env* files found: $($trackedEnv -join ', ')"
+  exit 1
+}
+Write-Host "PASS   [Tracked env files]"
+
+Write-Host "All app governance checks passed."
