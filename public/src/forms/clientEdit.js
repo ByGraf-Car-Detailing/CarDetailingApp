@@ -28,7 +28,7 @@ function validateEmail(email) {
 const editForm = document.getElementById("editClientForm");
 const warningBanner = document.getElementById("editWarningBanner");
 
-// 🔍 Funzione di EDIT cliente (singolo)
+//  Funzione di EDIT cliente (singolo)
 export async function loadClientForEdit(clientId) {
   document.getElementById("clientManageSection").style.display = "none";
   document.getElementById("clientEditSection").style.display = "block";
@@ -97,7 +97,7 @@ export async function loadClientForEdit(clientId) {
     <input type="text" id="editStreetNumber" value="${data.address?.number || ""}" ${readonly} />
     <label>CAP:</label>
     <input type="text" id="editCap" value="${data.address?.cap || ""}" ${readonly} inputmode="numeric" maxlength="5" />
-    <label>Città:</label>
+    <label>Citt:</label>
     <input type="text" id="editCity" value="${data.address?.city || ""}" ${readonly} />
 
     <label>Codice Fiscale / P.IVA:${isCompany ? " *" : ""}</label>
@@ -147,7 +147,7 @@ export async function loadClientForEdit(clientId) {
       capInput.value = capInput.value.replace(/[^0-9]/g, "");
     });
 
-    // Città: capitalize
+    // Citt: capitalize
     const cityInput = document.getElementById("editCity");
     cityInput.addEventListener("input", () => autoCapitalize(cityInput));
 
@@ -173,13 +173,13 @@ export async function loadClientForEdit(clientId) {
   editForm.onsubmit = async (e) => {
     e.preventDefault();
     if (disabled) {
-      alert("Cliente disattivato. Non è possibile salvare.");
+      alert("Cliente disattivato. Non  possibile salvare.");
       return;
     }
 
     const email = document.getElementById("editEmail").value.trim();
     if (email && !validateEmail(email)) {
-      alert("⚠️ Email non valida.");
+      alert(" Email non valida.");
       return;
     }
 
@@ -187,7 +187,7 @@ export async function loadClientForEdit(clientId) {
       const fc = document.getElementById("editFiscalCode").value.trim();
       if (!fc) {
         document.getElementById("editFiscalError").style.display = "block";
-        alert("⚠️ Codice Fiscale / P.IVA obbligatorio per le Ditte.");
+        alert(" Codice Fiscale / P.IVA obbligatorio per le Ditte.");
         return;
       }
     }
@@ -196,7 +196,7 @@ export async function loadClientForEdit(clientId) {
       const isContactChecked = document.getElementById("editIsContact").checked;
       const selectedCompany = document.getElementById("editCompanyId").value;
       if (isContactChecked && selectedCompany === "NO") {
-        alert("⚠️ Devi selezionare un'azienda se il cliente è un contatto aziendale.");
+        alert(" Devi selezionare un'azienda se il cliente  un contatto aziendale.");
         return;
       }
     }
@@ -226,13 +226,13 @@ export async function loadClientForEdit(clientId) {
 
     try {
       await updateDoc(ref, updates);
-      alert("✅ Cliente aggiornato.");
+      alert(" Cliente aggiornato.");
       document.getElementById("clientEditSection").style.display = "none";
       document.getElementById("clientManageSection").style.display = "block";
       import("./clientManage.js").then(m => m.loadClients());
     } catch (err) {
       console.error("Errore aggiornamento:", err.message);
-      alert("❌ Errore durante il salvataggio.");
+      alert(" Errore durante il salvataggio.");
     }
   };
 

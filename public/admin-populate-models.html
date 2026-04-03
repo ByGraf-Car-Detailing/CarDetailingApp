@@ -7,7 +7,7 @@
 <body>
   <h2>Popola collezione vehicleModels</h2>
   <p>Scarica tutti i modelli per ogni marca attiva in Firestore.</p>
-  <button id="startBtn">▶️ Avvia popolamento</button>
+  <button id="startBtn"> Avvia popolamento</button>
   <pre id="log" style="background:#222;color:#0f0;padding:15px;height:500px;overflow:auto;"></pre>
 
   <script type="module">
@@ -30,23 +30,23 @@
 
       try {
         // 1. Carica marche attive
-        print("📥 Caricamento marche attive da Firestore...");
+        print(" Caricamento marche attive da Firestore...");
         const makesSnap = await getDocs(query(collection(db, "vehicleMakes"), where("active", "==", true)));
         const makes = [];
         makesSnap.forEach(d => {
           if (d.data().name) makes.push(d.data().name);
         });
-        print(`✅ Trovate ${makes.length} marche attive`);
+        print(` Trovate ${makes.length} marche attive`);
 
         // 2. Carica modelli esistenti per evitare duplicati
-        print("🔍 Caricamento modelli esistenti...");
+        print(" Caricamento modelli esistenti...");
         const existingSnap = await getDocs(collection(db, "vehicleModels"));
         const existingSet = new Set();
         existingSnap.forEach(d => {
           const data = d.data();
           existingSet.add(`${data.make?.toUpperCase()}|${data.name?.toUpperCase()}`);
         });
-        print(`📋 Modelli già presenti: ${existingSet.size}`);
+        print(` Modelli gi presenti: ${existingSet.size}`);
 
         let totalAdded = 0;
         let totalSkipped = 0;
@@ -54,20 +54,20 @@
         // 3. Per ogni marca, scarica modelli da API
         for (let i = 0; i < makes.length; i++) {
           const make = makes[i];
-          print(`\n🚗 [${i+1}/${makes.length}] ${make}...`);
+          print(`\n [${i+1}/${makes.length}] ${make}...`);
 
           try {
             const url = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`;
             const resp = await fetch(url);
             
             if (!resp.ok) {
-              print(`   ⚠️ API error per ${make}`);
+              print(`    API error per ${make}`);
               continue;
             }
 
             const data = await resp.json();
             if (!Array.isArray(data.Results)) {
-              print(`   ⚠️ Nessun risultato per ${make}`);
+              print(`    Nessun risultato per ${make}`);
               continue;
             }
 
@@ -94,7 +94,7 @@
               added++;
             }
 
-            print(`   ✅ Aggiunti: ${added}, Saltati: ${skipped}`);
+            print(`    Aggiunti: ${added}, Saltati: ${skipped}`);
             totalAdded += added;
             totalSkipped += skipped;
 
@@ -102,17 +102,17 @@
             await new Promise(r => setTimeout(r, 300));
 
           } catch (err) {
-            print(`   ❌ Errore ${make}: ${err.message}`);
+            print(`    Errore ${make}: ${err.message}`);
           }
         }
 
         print(`\n========================================`);
-        print(`✅ COMPLETATO!`);
+        print(` COMPLETATO!`);
         print(`   Totale aggiunti: ${totalAdded}`);
         print(`   Totale saltati: ${totalSkipped}`);
 
       } catch (err) {
-        print("❌ Errore: " + err.message);
+        print(" Errore: " + err.message);
       }
 
       document.getElementById("startBtn").disabled = false;

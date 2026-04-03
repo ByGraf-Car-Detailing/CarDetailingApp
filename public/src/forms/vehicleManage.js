@@ -126,8 +126,8 @@ function renderList(docs) {
       <td>${v.licensePlate}</td>
       <td>${v.chassisNumber}</td>
       <td class="actions-column">
-        <button class="btn btn--icon btn--ghost editBtn" data-id="${v.id}">✏️</button>
-        <button class="btn btn--icon btn--danger deleteBtn" data-id="${v.id}">🗑️</button>
+        <button class="btn btn--icon btn--ghost editBtn" data-id="${v.id}"></button>
+        <button class="btn btn--icon btn--danger deleteBtn" data-id="${v.id}"></button>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -142,7 +142,7 @@ function renderList(docs) {
     if (btn.classList.contains("deleteBtn")) {
       if (confirm("Sei sicuro di voler cancellare questo veicolo?")) {
         await deleteDoc(doc(db, "cars", id));
-        alert("✅ Veicolo cancellato.");
+        alert(" Veicolo cancellato.");
         loadVehicles();
       }
     }
@@ -247,20 +247,20 @@ async function openVehicleEditModal(id) {
       updatedAt: serverTimestamp()
     };
     
-    if (!updates.brand) { msgBox.textContent = "❌ Marca obbligatoria."; return; }
-    if (!updates.model) { msgBox.textContent = "❌ Modello obbligatorio."; return; }
-    if (!updates.year) { msgBox.textContent = "❌ Anno obbligatorio."; return; }
+    if (!updates.brand) { msgBox.textContent = " Marca obbligatoria."; return; }
+    if (!updates.model) { msgBox.textContent = " Modello obbligatorio."; return; }
+    if (!updates.year) { msgBox.textContent = " Anno obbligatorio."; return; }
     
     try {
       await updateDoc(ref, updates);
       msgBox.className = "form-msg form-msg--success";
-      msgBox.textContent = "✅ Aggiornato.";
+      msgBox.textContent = " Aggiornato.";
       setTimeout(() => { closeModal(); loadVehicles(); }, 500);
     } catch (err) {
       msgBox.className = "form-msg form-msg--error";
-      msgBox.textContent = "❌ Errore durante il salvataggio.";
+      msgBox.textContent = " Errore durante il salvataggio.";
     }
   };
 
-  openModal({ title: "✏️ Modifica Veicolo", content: content, noModalCancelBtn: true });
+  openModal({ title: " Modifica Veicolo", content: content, noModalCancelBtn: true });
 }
