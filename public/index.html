@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
@@ -13,9 +13,9 @@
 </head>
 <body>
 
-  <!-- ðŸ”” BANNER AVVISI -->
+  <!-- BANNER AVVISI -->
   <div id="alertBanner" class="banner banner--warning" style="display: none;">
-    âš ï¸ Alcuni clienti risultano collegati ad aziende inesistenti. Correggi questi dati in "Modifica Clienti".
+    Alcuni clienti risultano collegati ad aziende inesistenti. Correggi questi dati in "Modifica Clienti".
   </div>
 
   <div id="jsErrorBanner" class="banner banner--error" style="display:none;"></div>
@@ -35,12 +35,12 @@
     <button id="logoutBtn" class="btn btn--ghost" data-testid="logout">Logout</button>
   </div>
 
-  <!-- 🧭 ADMIN RUNTIME TOOLS -->
+  <!-- ADMIN RUNTIME TOOLS -->
   <section id="catalogSyncSection" style="display:none;">
-    <h3>🧭 Amministrazione Catalogo</h3>
+    <h3>Amministrazione Catalogo</h3>
     <p>Sincronizzazione catalogo nel runtime dell'app (Spark-safe, esecuzione a blocchi).</p>
     <div class="toolbar">
-      <button id="backToDashboardCatalogSyncBtn" class="btn btn--ghost">← Torna alla Dashboard</button>
+      <button id="backToDashboardCatalogSyncBtn" class="btn btn--ghost">Torna alla Dashboard</button>
     </div>
     <fieldset>
       <legend>Parametri sincronizzazione</legend>
@@ -88,14 +88,14 @@
     <textarea id="catalogSyncLog" rows="14" readonly style="width:100%;"></textarea>
   </section>
 
-  <!-- ðŸ”½ FORM CLIENTE (Wizard) -->
+  <!-- FORM CLIENTE (Wizard) -->
   <section id="clientFormSection" style="display: none;">
-    <h3>âž• Aggiungi Cliente / Azienda</h3>
+    <h3>Aggiungi Cliente / Azienda</h3>
     <form id="clientForm">
       <!-- Navigazione -->
       <div class="toolbar">
-        <button type="button" id="backToListClientBtn" class="btn btn--ghost">â† Torna all'elenco</button>
-        <button type="button" id="backToDashboardClientBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+        <button type="button" id="backToListClientBtn" class="btn btn--ghost">Torna all'elenco</button>
+        <button type="button" id="backToDashboardClientBtn" class="btn btn--ghost">Torna alla Dashboard</button>
       </div>
 
       <!-- Step 1: Tipo cliente -->
@@ -160,7 +160,7 @@
         <input type="text" id="streetNumber" required />
         <label>CAP:</label>
         <input type="text" id="cap" required inputmode="numeric" pattern="[0-9]*" />
-        <label>CittÃ :</label>
+        <label>Citta:</label>
         <input type="text" id="city" required />
       </div>
 
@@ -182,27 +182,27 @@
     </form>
   </section>
 
-  <!-- âœï¸ SEZIONE MODIFICA CLIENTI -->
+  <!-- SEZIONE MODIFICA CLIENTI -->
   <section id="clientEditSection" style="display: none;">
-    <h3>âœï¸ Modifica Cliente</h3>
+    <h3>Modifica Cliente</h3>
 
-    <button id="backToDashboardBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+    <button id="backToDashboardBtn" class="btn btn--ghost">Torna alla Dashboard</button>
 
-    <!-- âš ï¸ AVVISO CLIENTE DISATTIVATO -->
+    <!-- AVVISO CLIENTE DISATTIVATO -->
     <div id="editWarningBanner" class="banner banner--warning" style="display: none;">
-      âš ï¸ Questo cliente Ã¨ disattivato. Non Ã¨ possibile modificare i suoi dati finchÃ© non viene riattivato.
+      Questo cliente e disattivato. Non e possibile modificare i suoi dati finche non viene riattivato.
     </div>
 
-    <!-- ðŸ“ FORM MODIFICA CLIENTE -->
+    <!-- FORM MODIFICA CLIENTE -->
     <form id="editClientForm" style="display: none;"></form>
   </section>
 
-  <!-- ðŸ‘¥ SEZIONE GESTIONE CLIENTI -->
+  <!-- SEZIONE GESTIONE CLIENTI -->
   <section id="clientManageSection" style="display: none;">
-    <h3>ðŸ‘¥ Gestione Clienti</h3>
+    <h3>Gestione Clienti</h3>
     <div class="toolbar">
-      <button id="backToDashboardClientsBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
-      <button id="showAddClientBtn" class="btn btn--primary">âž• Aggiungi Cliente</button>
+      <button id="backToDashboardClientsBtn" class="btn btn--ghost">Torna alla Dashboard</button>
+      <button id="showAddClientBtn" class="btn btn--primary">Aggiungi Cliente</button>
     </div>
 
     <fieldset>
@@ -228,12 +228,12 @@
     <div id="clientsList"></div>
   </section>
 
-  <!-- ðŸš— SEZIONE GESTIONE VEICOLI -->
+  <!-- SEZIONE GESTIONE VEICOLI -->
   <section id="vehicleManageSection" style="display:none;">
-    <h3>ðŸš— Gestione Veicoli</h3>
+    <h3>Gestione Veicoli</h3>
     <div class="toolbar">
-      <button id="backToDashboardVehiclesBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
-      <button id="showAddVehicleBtn" class="btn btn--primary">âž• Aggiungi Veicolo</button>
+      <button id="backToDashboardVehiclesBtn" class="btn btn--ghost">Torna alla Dashboard</button>
+      <button id="showAddVehicleBtn" class="btn btn--primary">Aggiungi Veicolo</button>
     </div>
     
     <fieldset>
@@ -255,13 +255,13 @@
     <div id="vehicleEditContainer" style="display:none;"></div>
   </section>
 
-  <!-- ðŸš— SEZIONE INSERIMENTO VEICOLO -->
+  <!-- SEZIONE INSERIMENTO VEICOLO -->
   <section id="vehicleFormSection" style="display:none;">
-    <h3>âž• Aggiungi Veicolo</h3>
+    <h3>Aggiungi Veicolo</h3>
     <form id="vehicleForm">
       <div class="toolbar">
-        <button type="button" id="backToListVehicleBtn" class="btn btn--ghost">â† Torna all'elenco</button>
-        <button type="button" id="backToDashboardVehicleBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+        <button type="button" id="backToListVehicleBtn" class="btn btn--ghost">Torna all'elenco</button>
+        <button type="button" id="backToDashboardVehicleBtn" class="btn btn--ghost">Torna alla Dashboard</button>
       </div>
       
       <div id="stepCustomer">
@@ -337,12 +337,12 @@
     </form>
   </section>
 
-  <!-- ðŸ“… SEZIONE GESTIONE APPUNTAMENTI -->
+  <!-- SEZIONE GESTIONE APPUNTAMENTI -->
   <section id="appointmentManageSection" style="display: none;">
-    <h3>ðŸ“… Gestione Appuntamenti</h3>
+    <h3>Gestione Appuntamenti</h3>
     <div class="toolbar">
-      <button id="backToDashboardAppointmentsBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
-      <button id="showAppointmentFormFromListBtn" class="btn btn--primary">âž• Nuovo appuntamento</button>
+      <button id="backToDashboardAppointmentsBtn" class="btn btn--ghost">Torna alla Dashboard</button>
+      <button id="showAppointmentFormFromListBtn" class="btn btn--primary">Nuovo appuntamento</button>
     </div>
     
     <fieldset>
@@ -354,7 +354,7 @@
       <label for="filterPlate">Targa:</label>
       <input type="text" id="filterPlate" />
       
-      <label for="filterChassis">NÂ° TELAIO:</label>
+      <label for="filterChassis">N. TELAIO:</label>
       <input type="text" id="filterChassis" />
       
       <label for="filterJobType">Tipo lavoro:</label>
@@ -393,12 +393,12 @@
     <div id="appointmentsList"></div>
   </section>
 
-  <!-- ðŸ“… SEZIONE NUOVO APPUNTAMENTO -->
+  <!-- SEZIONE NUOVO APPUNTAMENTO -->
   <section id="appointmentFormSection" style="display: none;">
-    <h3 id="appointmentFormTitle">âž• Nuovo appuntamento</h3>
+    <h3 id="appointmentFormTitle">Nuovo appuntamento</h3>
     <div class="toolbar">
-      <button type="button" id="backToListAppointmentBtn" class="btn btn--ghost">â† Torna all'elenco</button>
-      <button type="button" id="backToDashboardAppointmentBtn" class="btn btn--ghost">â† Torna alla Dashboard</button>
+      <button type="button" id="backToListAppointmentBtn" class="btn btn--ghost">Torna all'elenco</button>
+      <button type="button" id="backToDashboardAppointmentBtn" class="btn btn--ghost">Torna alla Dashboard</button>
     </div>
     <form id="appointmentForm" autocomplete="off">
       <div id="stepLocationAppointment"></div>
@@ -419,7 +419,7 @@
     </form>
   </section>
 
-  <!-- ðŸ”— Script principali -->
+  <!-- Script principali -->
   <script type="module" src="/src/app.js"></script>
   <script type="module" src="/src/forms/clientForm.js"></script>
   <script type="module" src="/src/forms/clientEdit.js"></script>
@@ -429,5 +429,8 @@
 
 </body>
 </html>
+
+
+
 
 

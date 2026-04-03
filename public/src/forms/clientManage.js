@@ -155,8 +155,8 @@ function renderList(docs) {
       <td><span class="show-desktop">${tipoFull}</span><span class="show-mobile">${tipoShort}</span></td>
       <td><span class="badge show-desktop" data-active="${isActive}">${statoFull}</span><span class="badge ${statoClass} show-mobile">${statoShort}</span></td>
       <td class="actions-column">
-        <button class="btn btn--icon btn--view viewBtn" data-id="${d.id}" title="Visualizza">🔍</button>
-        <button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica">✏️</button>
+        <button class="btn btn--icon btn--view viewBtn" data-id="${d.id}" title="Visualizza">Visualizza</button>
+        <button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica">Modifica</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -222,10 +222,12 @@ async function showClientViewModal(clientId) {
   `;
   
   openModal({
-    title: "👤 Dettagli Cliente",
+    title: "Dettagli Cliente",
     content: content,
     noModalCancelBtn: false
   });
 }
 
 export { renderList };
+
+

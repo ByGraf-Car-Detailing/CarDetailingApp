@@ -1,4 +1,4 @@
-﻿// âœ… src/app.js
+// src/app.js
 import {
   collection,
   getDocs,
@@ -100,7 +100,7 @@ window.addEventListener("beforeunload", () => {
 
 bindDashboardBackButtons();
 
-// ðŸŽ› Funzione UI centrale
+// Funzione UI centrale
 function updateUI(userInfo) {
   loginContainer.style.display = "none";
   logoutBtn.style.display = "inline-block";
@@ -115,7 +115,7 @@ function updateUI(userInfo) {
 }
 
 
-// ðŸ”§ Utility per nascondere tutte le sezioni
+// Utility per nascondere tutte le sezioni
 function hideAllSections() {
   dashboardContainer.style.display = "none";
   clientFormSection.style.display = "none";
@@ -129,7 +129,7 @@ function hideAllSections() {
   roleButtons.style.display = "none";
 }
 
-// âž• Pulsanti dinamici
+// Pulsanti dinamici
 function addRoleButton(label, action) {
   const btn = document.createElement("button");
   btn.className = "btn btn--primary";
@@ -167,7 +167,7 @@ function applyCurrentViewEffects(viewKey) {
   }
 }
 
-// ðŸ§¹ Controlla se ci sono contatti orfani
+// Controlla se ci sono contatti orfani
 async function checkInvalidContacts() {
   const invalidContacts = [];
 
@@ -213,7 +213,7 @@ window.addEventListener("beforeunload", () => {
 
 export async function showDashboard(userInfo = null) {
   hideAllSections();
-  // FORZA SEMPRE la visibilitÃ  e la pulizia DOM!
+  // FORZA SEMPRE la visibilita e la pulizia DOM!
   dashboardContainer.style.display = "block";
   loginContainer.style.display = "none";
   logoutBtn.style.display = "inline-block";
@@ -308,6 +308,7 @@ export async function showDashboard(userInfo = null) {
   if (document.getElementById("vehicleForm")) document.getElementById("vehicleForm").reset();
   if (typeof hideSteps === "function") hideSteps();
 }
+
 
 
 

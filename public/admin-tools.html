@@ -5,9 +5,9 @@
   <title>Inizializza campo active</title>
 </head>
 <body>
-  <h2>🛠️ Strumento Admin: Inizializza campo "active" nei clienti</h2>
+  <h2>Strumento Admin: Inizializza campo "active" nei clienti</h2>
   <p>Questa operazione imposta <strong>active: true</strong> in tutti i documenti della collezione <code>clients</code> che ne sono privi.</p>
-  <button id="startBtn">▶️ Avvia aggiornamento</button>
+  <button id="startBtn">Avvia aggiornamento</button>
   <p id="log"></p>
 
   <script type="module">
@@ -23,12 +23,12 @@
     const btn = document.getElementById("startBtn");
 
     btn.addEventListener("click", async () => {
-      log.textContent = "⏳ Attendere...";
+      log.textContent = "Attendere...";
       btn.disabled = true;
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
-          log.textContent = "⛔ Autenticazione richiesta.";
+          log.textContent = "Autenticazione richiesta.";
           return;
         }
 
@@ -44,10 +44,10 @@
             }
           }
 
-          log.textContent = `✅ Aggiornati ${count} documenti.`;
+          log.textContent = `OK: Aggiornati ${count} documenti.`;
         } catch (err) {
           console.error(err);
-          log.textContent = "❌ Errore durante l'aggiornamento.";
+          log.textContent = "Errore: Errore durante l'aggiornamento.";
         } finally {
           btn.disabled = false;
         }
