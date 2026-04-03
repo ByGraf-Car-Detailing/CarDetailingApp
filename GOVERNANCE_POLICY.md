@@ -8,6 +8,7 @@
 ## Required CI Checks on `main`
 - `quality`
 - `validate-governance`
+- `coworking-proof`
 
 `validate-governance` is enforced by `.github/workflows/governance-guard.yml` and must be green on PR and on `main` pushes.
 
