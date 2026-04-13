@@ -13,7 +13,7 @@ import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
 import { initRouter } from "./router.js";
 
-const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-2";
+const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-3";
 
 // DOM
 const loginContainer = document.getElementById("loginContainer");

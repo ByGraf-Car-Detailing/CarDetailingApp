@@ -239,6 +239,14 @@ button[type="submit"]:hover {
   pointer-events: none;
 }
 
+html.runtime-prod #catalogSyncSection {
+  display: none !important;
+}
+
+html.runtime-prod #roleButtons [data-testid="dash-catalog-sync-admin"] {
+  display: none !important;
+}
+
 /* ====================================================
    FORM ELEMENTS
    ==================================================== */
