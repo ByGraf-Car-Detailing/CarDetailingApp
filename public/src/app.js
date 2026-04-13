@@ -13,6 +13,7 @@ import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
 import { initRouter } from "./router.js";
 
+const RUNTIME_BUILD_TAG = "20260413-icons-hotfix-1";
 
 // DOM
 const loginContainer = document.getElementById("loginContainer");
@@ -147,15 +148,15 @@ function addRoleButton(label, action) {
 
 function applyCurrentViewEffects(viewKey) {
   if (viewKey === "gestioneVeicoli") {
-    import("./forms/vehicleManage.js").then((m) => m.loadVehicles());
+    import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadVehicles());
     return;
   }
   if (viewKey === "gestioneClienti") {
-    import("./forms/clientManage.js").then((m) => m.loadClients());
+    import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadClients());
     return;
   }
   if (viewKey === "gestioneAppuntamenti") {
-    import("./forms/appointmentManage.js").then((m) => m.loadAppointments());
+    import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadAppointments());
     return;
   }
   if (viewKey === "nuovoAppuntamento") {
@@ -274,7 +275,7 @@ export async function showDashboard(userInfo = null) {
     addRoleButton("Gestione appuntamenti", () => {
       hideAllSections();
       appointmentManageSection.style.display = "block";
-      import("./forms/appointmentManage.js").then(m => m.loadAppointments());
+      import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadAppointments());
       router.setCurrentView("gestioneAppuntamenti");
     });
     addRoleButton("Nuovo appuntamento", () => {
@@ -286,14 +287,14 @@ export async function showDashboard(userInfo = null) {
     addRoleButton("Gestione Veicoli", () => {
       hideAllSections();
       vehicleManageSection.style.display = "block";
-      import("./forms/vehicleManage.js").then(m => m.loadVehicles());
+      import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadVehicles());
       router.setCurrentView("gestioneVeicoli");
     });
     if (userRole === "admin") {
       addRoleButton("Gestione Clienti", () => {
         hideAllSections();
         clientManageSection.style.display = "block";
-        import("./forms/clientManage.js").then(m => m.loadClients());
+        import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadClients());
         router.setCurrentView("gestioneClienti");
       });
       addRoleButton("Catalog Sync Admin", () => {
