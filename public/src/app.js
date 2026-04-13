@@ -33,7 +33,10 @@ const appointmentFormSection = document.getElementById("appointmentFormSection")
 const catalogSyncSection = document.getElementById("catalogSyncSection");
 
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
-const IS_STAGING_RUNTIME = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
+const HOSTNAME = window.location.hostname;
+const IS_LOCAL_RUNTIME = HOSTNAME === "localhost" || HOSTNAME === "127.0.0.1";
+const IS_STAGING_PROJECT = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
+const IS_STAGING_RUNTIME = IS_STAGING_PROJECT || IS_LOCAL_RUNTIME;
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
