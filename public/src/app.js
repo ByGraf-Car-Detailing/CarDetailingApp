@@ -13,7 +13,7 @@ import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
 import { initRouter } from "./router.js";
 
-const RUNTIME_BUILD_TAG = "20260413-icons-hotfix-1";
+const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-2";
 
 // DOM
 const loginContainer = document.getElementById("loginContainer");
@@ -33,6 +33,7 @@ const appointmentFormSection = document.getElementById("appointmentFormSection")
 const catalogSyncSection = document.getElementById("catalogSyncSection");
 
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
+const IS_STAGING_RUNTIME = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
@@ -164,6 +165,11 @@ function applyCurrentViewEffects(viewKey) {
     return;
   }
   if (viewKey === "catalogSyncAdmin") {
+    if (!IS_STAGING_RUNTIME) {
+      router.clearCurrentView();
+      showDashboard();
+      return;
+    }
     import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
   }
 }
@@ -297,12 +303,14 @@ export async function showDashboard(userInfo = null) {
         import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadClients());
         router.setCurrentView("gestioneClienti");
       });
-      addRoleButton("Catalog Sync Admin", () => {
-        hideAllSections();
-        catalogSyncSection.style.display = "block";
-        import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
-        router.setCurrentView("catalogSyncAdmin");
-      });
+      if (IS_STAGING_RUNTIME) {
+        addRoleButton("Catalog Sync Admin", () => {
+          hideAllSections();
+          catalogSyncSection.style.display = "block";
+          import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
+          router.setCurrentView("catalogSyncAdmin");
+        });
+      }
     }
   }
 
