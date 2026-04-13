@@ -13,6 +13,17 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+const EDIT_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/>
+  </svg>
+`;
+const DELETE_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9Z" fill="currentColor"/>
+  </svg>
+`;
+
 async function populateJobTypeFilter(select) {
   select.innerHTML = `<option value="">Tutti</option>`;
   const snap = await getDocs(collection(db, "jobTypes"));
@@ -204,10 +215,10 @@ export async function loadAppointments() {
   
       let actions = "";
       if ((userRole === "admin") || (userRole === "staff" && d.createdBy === userEmail)) {
-        actions += `<button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}"></button>`;
+        actions += `<button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica" aria-label="Modifica appuntamento">${EDIT_ICON}</button>`;
       }
       if (userRole === "admin") {
-        actions += `<button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}"></button>`;
+        actions += `<button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}" title="Elimina" aria-label="Elimina appuntamento">${DELETE_ICON}</button>`;
       }
   
       const tr = document.createElement("tr");
