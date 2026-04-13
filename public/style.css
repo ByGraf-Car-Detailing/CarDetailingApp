@@ -231,6 +231,22 @@ button[type="submit"]:hover {
   font-size: 14px;
 }
 
+.btn__icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+html.runtime-prod #catalogSyncSection {
+  display: none !important;
+}
+
+html.runtime-prod #roleButtons [data-testid="dash-catalog-sync-admin"] {
+  display: none !important;
+}
+
 /* ====================================================
    FORM ELEMENTS
    ==================================================== */

@@ -24,6 +24,17 @@ const backBtn = document.getElementById("backToDashboardVehiclesBtn");
 const vehicleManageSection = document.getElementById("vehicleManageSection");
 const resetBtn = document.getElementById("resetVehiclesBtn");
 
+const EDIT_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/>
+  </svg>
+`;
+const DELETE_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9Z" fill="currentColor"/>
+  </svg>
+`;
+
 // Format telaio: XXX XXX XXX...
 function formatVINOnInput(input) {
   const pos = input.selectionStart;
@@ -126,8 +137,8 @@ function renderList(docs) {
       <td>${v.licensePlate}</td>
       <td>${v.chassisNumber}</td>
       <td class="actions-column">
-        <button class="btn btn--icon btn--ghost editBtn" data-id="${v.id}"></button>
-        <button class="btn btn--icon btn--danger deleteBtn" data-id="${v.id}"></button>
+        <button class="btn btn--icon btn--ghost editBtn" data-id="${v.id}" title="Modifica" aria-label="Modifica veicolo">${EDIT_ICON}</button>
+        <button class="btn btn--icon btn--danger deleteBtn" data-id="${v.id}" title="Elimina" aria-label="Elimina veicolo">${DELETE_ICON}</button>
       </td>`;
     tbody.appendChild(tr);
   });

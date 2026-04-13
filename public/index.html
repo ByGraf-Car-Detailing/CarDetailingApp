@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0B0D10" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/critical-ios.css">
   <title>Car Detailing App</title>
@@ -419,8 +419,58 @@
     </form>
   </section>
 
+  <script>
+    (function () {
+      const host = window.location.hostname;
+      const isProdHost = host === "cardetailingapp-e6c95.web.app" || host === "cardetailingapp-e6c95.firebaseapp.com";
+
+      if (isProdHost) {
+        document.documentElement.classList.add("runtime-prod");
+      }
+
+      const editIconSvg = '<svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/></svg>';
+      const deleteIconSvg = '<svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9Z" fill="currentColor"/></svg>';
+
+      function enforceProdBoundary() {
+        if (!isProdHost) return;
+        const roleButtons = document.getElementById("roleButtons");
+        if (!roleButtons) return;
+        const candidates = roleButtons.querySelectorAll("button, a");
+        for (const el of candidates) {
+          const label = (el.textContent || "").trim().toLowerCase();
+          if (label === "catalog sync admin") {
+            el.remove();
+          }
+        }
+      }
+
+      function hydrateActionIcons() {
+        document.querySelectorAll("button.btn--icon.editBtn:empty").forEach((btn) => {
+          btn.innerHTML = editIconSvg;
+          if (!btn.getAttribute("aria-label")) btn.setAttribute("aria-label", "Modifica");
+          if (!btn.getAttribute("title")) btn.setAttribute("title", "Modifica");
+        });
+        document.querySelectorAll("button.btn--icon.deleteBtn:empty").forEach((btn) => {
+          btn.innerHTML = deleteIconSvg;
+          if (!btn.getAttribute("aria-label")) btn.setAttribute("aria-label", "Elimina");
+          if (!btn.getAttribute("title")) btn.setAttribute("title", "Elimina");
+        });
+      }
+
+      function applyRuntimeGuards() {
+        enforceProdBoundary();
+        hydrateActionIcons();
+      }
+
+      window.addEventListener("DOMContentLoaded", applyRuntimeGuards);
+      const observer = new MutationObserver(applyRuntimeGuards);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      applyRuntimeGuards();
+    })();
+  </script>
+
   <!-- Script principali -->
-  <script type="module" src="/src/app.js"></script>
+  <script type="module" src="/src/app.js?v=20260413-prod-hotfix-3"></script>
   <script type="module" src="/src/forms/clientForm.js"></script>
   <script type="module" src="/src/forms/clientEdit.js"></script>
   <script type="module" src="/src/forms/vehicleForm.js"></script>

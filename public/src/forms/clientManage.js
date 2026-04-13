@@ -24,6 +24,17 @@ const searchInactive = document.getElementById("searchIncludeInactive");
 const list = document.getElementById("clientsList");
 const clientManageSection = document.getElementById("clientManageSection");
 
+const VIEW_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Zm10.5 4.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" fill="currentColor"/>
+  </svg>
+`;
+const EDIT_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/>
+  </svg>
+`;
+
 // Event: Back to Dashboard
 backBtn.addEventListener("click", () => {
   localStorage.removeItem("currentView");
@@ -155,8 +166,8 @@ function renderList(docs) {
       <td><span class="show-desktop">${tipoFull}</span><span class="show-mobile">${tipoShort}</span></td>
       <td><span class="badge show-desktop" data-active="${isActive}">${statoFull}</span><span class="badge ${statoClass} show-mobile">${statoShort}</span></td>
       <td class="actions-column">
-        <button class="btn btn--icon btn--view viewBtn" data-id="${d.id}" title="Visualizza"></button>
-        <button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica"></button>
+        <button class="btn btn--icon btn--view viewBtn" data-id="${d.id}" title="Visualizza" aria-label="Visualizza cliente">${VIEW_ICON}</button>
+        <button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica" aria-label="Modifica cliente">${EDIT_ICON}</button>
       </td>
     `;
     tbody.appendChild(tr);

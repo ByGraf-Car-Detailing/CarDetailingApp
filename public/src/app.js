@@ -13,6 +13,7 @@ import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
 import { initRouter } from "./router.js";
 
+const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-3";
 
 // DOM
 const loginContainer = document.getElementById("loginContainer");
@@ -32,6 +33,10 @@ const appointmentFormSection = document.getElementById("appointmentFormSection")
 const catalogSyncSection = document.getElementById("catalogSyncSection");
 
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
+const HOSTNAME = window.location.hostname;
+const IS_LOCAL_RUNTIME = HOSTNAME === "localhost" || HOSTNAME === "127.0.0.1";
+const IS_STAGING_PROJECT = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
+const IS_STAGING_RUNTIME = IS_STAGING_PROJECT || IS_LOCAL_RUNTIME;
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
@@ -147,15 +152,15 @@ function addRoleButton(label, action) {
 
 function applyCurrentViewEffects(viewKey) {
   if (viewKey === "gestioneVeicoli") {
-    import("./forms/vehicleManage.js").then((m) => m.loadVehicles());
+    import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadVehicles());
     return;
   }
   if (viewKey === "gestioneClienti") {
-    import("./forms/clientManage.js").then((m) => m.loadClients());
+    import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadClients());
     return;
   }
   if (viewKey === "gestioneAppuntamenti") {
-    import("./forms/appointmentManage.js").then((m) => m.loadAppointments());
+    import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadAppointments());
     return;
   }
   if (viewKey === "nuovoAppuntamento") {
@@ -163,6 +168,11 @@ function applyCurrentViewEffects(viewKey) {
     return;
   }
   if (viewKey === "catalogSyncAdmin") {
+    if (!IS_STAGING_RUNTIME) {
+      router.clearCurrentView();
+      showDashboard();
+      return;
+    }
     import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
   }
 }
@@ -274,7 +284,7 @@ export async function showDashboard(userInfo = null) {
     addRoleButton("Gestione appuntamenti", () => {
       hideAllSections();
       appointmentManageSection.style.display = "block";
-      import("./forms/appointmentManage.js").then(m => m.loadAppointments());
+      import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadAppointments());
       router.setCurrentView("gestioneAppuntamenti");
     });
     addRoleButton("Nuovo appuntamento", () => {
@@ -286,22 +296,24 @@ export async function showDashboard(userInfo = null) {
     addRoleButton("Gestione Veicoli", () => {
       hideAllSections();
       vehicleManageSection.style.display = "block";
-      import("./forms/vehicleManage.js").then(m => m.loadVehicles());
+      import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadVehicles());
       router.setCurrentView("gestioneVeicoli");
     });
     if (userRole === "admin") {
       addRoleButton("Gestione Clienti", () => {
         hideAllSections();
         clientManageSection.style.display = "block";
-        import("./forms/clientManage.js").then(m => m.loadClients());
+        import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadClients());
         router.setCurrentView("gestioneClienti");
       });
-      addRoleButton("Catalog Sync Admin", () => {
-        hideAllSections();
-        catalogSyncSection.style.display = "block";
-        import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
-        router.setCurrentView("catalogSyncAdmin");
-      });
+      if (IS_STAGING_RUNTIME) {
+        addRoleButton("Catalog Sync Admin", () => {
+          hideAllSections();
+          catalogSyncSection.style.display = "block";
+          import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
+          router.setCurrentView("catalogSyncAdmin");
+        });
+      }
     }
   }
 
