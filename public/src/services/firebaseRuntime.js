@@ -21,14 +21,25 @@ const REQUIRED_RUNTIME_CONFIG_KEYS = [
   "appId",
 ];
 
-function assertRuntimeConfigShape(config, sourceLabel) {
+function assertRuntimeConfigShape(config, sourceLabel, { warnKeys = new Set() } = {}) {
   const missing = REQUIRED_RUNTIME_CONFIG_KEYS.filter((key) => {
     const value = config?.[key];
     return typeof value !== "string" || value.trim() === "";
   });
 
-  if (missing.length > 0) {
-    throw new Error(`[firebase] ${sourceLabel} missing required keys: ${missing.join(", ")}`);
+  const errors = missing.filter((key) => !warnKeys.has(key));
+  const warnings = missing.filter((key) => warnKeys.has(key));
+
+  if (warnings.length > 0) {
+    console.warn(
+      `[firebase] ${sourceLabel} missing optional-on-env keys: ${warnings.join(
+        ", "
+      )} (feature degradation expected)`
+    );
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[firebase] ${sourceLabel} missing required keys: ${errors.join(", ")}`);
   }
 
   // `measurementId` is optional, but if present it must be coherent.
@@ -38,11 +49,14 @@ function assertRuntimeConfigShape(config, sourceLabel) {
 }
 
 async function resolveFirebaseConfig() {
+  const STAGING_PROJECT_ID = "cardetailingapp-e6c95-staging";
+
   try {
     const response = await fetch("/__/firebase/init.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`init.json HTTP ${response.status}`);
     const json = await response.json();
-    assertRuntimeConfigShape(json, "init.json");
+    const warnKeys = json?.projectId === STAGING_PROJECT_ID ? new Set(["appId"]) : new Set();
+    assertRuntimeConfigShape(json, "init.json", { warnKeys });
     return json;
   } catch (error) {
     const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
