@@ -9,6 +9,7 @@
                             "cross-env": "^10.1.0",
                             "firebase-admin":  "^13.6.0",
                             "firebase-tools":  "^15.12.0",
+                            "google-auth-library": "^10.4.1",
                             "http-server":  "^14.1.1",
                             "vitest":  "^4.0.18"
                         },
@@ -25,7 +26,8 @@
                     "bootstrap:staging:placeholders": "node scripts/bootstrap-staging-placeholders.mjs",
                     "sync:staging:reference": "node scripts/sync-staging-reference-data.mjs",
                     "populate:staging:catalog": "node scripts/populate-staging-vehicle-catalog.mjs",
-                    "normalize:staging:numeric-contract": "node scripts/normalize-numeric-contract.mjs"
+                    "normalize:staging:numeric-contract": "node scripts/normalize-numeric-contract.mjs",
+                    "check:auth:contract": "node scripts/check-auth-domain-contract.mjs"
                 },
     "repository":  {
                        "type":  "git",

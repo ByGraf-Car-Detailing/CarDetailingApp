@@ -41,5 +41,11 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-runtime-contract.ps1
 
+      - name: Auth provider/domain contract parity guard
+        env:
+          FIREBASE_SERVICE_ACCOUNT_STAGING: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
+          FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: npm run check:auth:contract
+
       - name: Emulator E2E baseline
         run: npm run test:emu

@@ -1,0 +1,34 @@
+{
+  "staging": {
+    "projectId": "cardetailingapp-e6c95-staging",
+    "requiredProviders": [
+      "emailPassword",
+      "google"
+    ],
+    "requiredDomains": [
+      "localhost",
+      "cardetailingapp-e6c95-staging.firebaseapp.com",
+      "cardetailingapp-e6c95-staging.web.app"
+    ],
+    "forbiddenDomains": [
+      "cardetailingapp-e6c95.web.app",
+      "cardetailingapp-e6c95.firebaseapp.com"
+    ]
+  },
+  "prod": {
+    "projectId": "cardetailingapp-e6c95",
+    "requiredProviders": [
+      "emailPassword",
+      "google"
+    ],
+    "requiredDomains": [
+      "localhost",
+      "cardetailingapp-e6c95.firebaseapp.com",
+      "cardetailingapp-e6c95.web.app"
+    ],
+    "forbiddenDomains": [
+      "cardetailingapp-e6c95-staging.web.app",
+      "cardetailingapp-e6c95-staging.firebaseapp.com"
+    ]
+  }
+}

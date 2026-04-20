@@ -13,6 +13,7 @@
 `quality` includes runtime parity guard (`scripts/validate-runtime-contract.ps1`) that blocks PRs when:
 - Firebase runtime config contract is incomplete/incoherent.
 - staging/prod boundary assertions for staging-only lane are missing.
+- Auth provider/domain contract diverges from required staging/prod baseline (`scripts/check-auth-domain-contract.mjs` + `config/auth-domain-contract.json`).
 
 `validate-governance` is enforced by `.github/workflows/governance-guard.yml` and must be green on PR and on `main` pushes.
 
