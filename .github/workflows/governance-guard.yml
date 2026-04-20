@@ -73,3 +73,4 @@ jobs:
       - name: Run app governance checks
         shell: pwsh
         run: ./scripts/validate-governance.ps1
+
