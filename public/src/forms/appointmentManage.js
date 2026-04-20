@@ -63,6 +63,16 @@ export async function loadAppointments() {
   const filterOperator = document.getElementById("filterOperator");
   const filterJobType = document.getElementById("filterJobType");
   const filterPlate = document.getElementById("filterPlate");
+  const allowedUsersSnap = await getDocs(collection(db, "allowedUsers"));
+  const operatorDisplayById = new Map();
+  allowedUsersSnap.forEach((docSnap) => {
+    const d = docSnap.data() || {};
+    const displayName =
+      (typeof d.displayName === "string" && d.displayName.trim()) ||
+      (typeof d.email === "string" && d.email.trim()) ||
+      docSnap.id;
+    operatorDisplayById.set(docSnap.id, displayName);
+  });
   await populateOperatorFilter(filterOperator);
   await populateJobTypeFilter(filterJobType);
   const searchBtn = document.getElementById("searchAppointmentsBtn");
@@ -209,7 +219,7 @@ export async function loadAppointments() {
       const targa = d.vehicleData?.licensePlate || "";
       const telaio = d.vehicleData?.chassisNumber || "N/D";
       const jobType = d.jobTypeData?.description || "";
-      const operatore = formatOperatore(d);
+      const operatore = formatOperatore(d, operatorDisplayById);
       const stato = d.status || "";
       const dataLavorazione = d.startWork ? formatDateTime(d.startWork) : "";
   
@@ -283,7 +293,7 @@ export async function loadAppointments() {
         <label>Tipo Lavoro:</label>
         <input type="text" value="${data.jobTypeData?.description || ""}" readonly />
         <label>Operatore:</label>
-        <input type="text" value="${formatOperatore(data)}" readonly />
+        <input type="text" value="${formatOperatore(data, operatorDisplayById)}" readonly />
         <label>Stato:</label>
         <select id="editStatus" ${canEditAll ? "" : "disabled"}>
           ${statusOptions(data.status)}
@@ -406,8 +416,14 @@ export async function loadAppointments() {
     });
   }
 
-  function formatOperatore(data) {
+  function formatOperatore(data, operatorDisplayMap) {
     if (data.operatorData?.displayName) return data.operatorData.displayName;
+    if (data.operatorId && operatorDisplayMap?.has(data.operatorId)) {
+      return operatorDisplayMap.get(data.operatorId);
+    }
+    if (data.operatorData?.operatorId && operatorDisplayMap?.has(data.operatorData.operatorId)) {
+      return operatorDisplayMap.get(data.operatorData.operatorId);
+    }
     if (data.operatorData?.email) return data.operatorData.email;
     if (data.operatorData?.operatorId) return data.operatorData.operatorId;
     if (data.operatorId) return data.operatorId;

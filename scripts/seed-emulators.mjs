@@ -1,9 +1,9 @@
-﻿import admin from "firebase-admin";
+import admin from "firebase-admin";
 
 process.env.FIREBASE_AUTH_EMULATOR_HOST = "127.0.0.1:9099";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 
-admin.initializeApp({ projectId: "cardetailingapp-e6c95" });
+admin.initializeApp({ projectId: "cardetailingapp-e6c95-staging" });
 
 const auth = admin.auth();
 const db = admin.firestore();
