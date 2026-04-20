@@ -12,17 +12,43 @@ const PROD_FALLBACK_CONFIG = {
   measurementId: "G-26ZKJX6D03",
 };
 
+const REQUIRED_RUNTIME_CONFIG_KEYS = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+];
+
+function assertRuntimeConfigShape(config, sourceLabel) {
+  const missing = REQUIRED_RUNTIME_CONFIG_KEYS.filter((key) => {
+    const value = config?.[key];
+    return typeof value !== "string" || value.trim() === "";
+  });
+
+  if (missing.length > 0) {
+    throw new Error(`[firebase] ${sourceLabel} missing required keys: ${missing.join(", ")}`);
+  }
+
+  // `measurementId` is optional, but if present it must be coherent.
+  if ("measurementId" in config && (!config.measurementId || typeof config.measurementId !== "string")) {
+    throw new Error("[firebase] measurementId must be a non-empty string when provided");
+  }
+}
+
 async function resolveFirebaseConfig() {
   try {
     const response = await fetch("/__/firebase/init.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`init.json HTTP ${response.status}`);
     const json = await response.json();
-    if (json?.projectId) return json;
-    throw new Error("init.json missing projectId");
+    assertRuntimeConfigShape(json, "init.json");
+    return json;
   } catch (error) {
     const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
     if (isLocal) {
       console.warn("[firebase] using local fallback config:", error?.message || error);
+      assertRuntimeConfigShape(PROD_FALLBACK_CONFIG, "local fallback");
       return PROD_FALLBACK_CONFIG;
     }
     throw new Error(

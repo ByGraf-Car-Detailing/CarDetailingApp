@@ -37,5 +37,9 @@ jobs:
       - name: Quality lint gate
         run: npm run lint:quality
 
+      - name: Runtime parity + prod/staging boundary guard
+        shell: pwsh
+        run: ./scripts/validate-runtime-contract.ps1
+
       - name: Emulator E2E baseline
         run: npm run test:emu
