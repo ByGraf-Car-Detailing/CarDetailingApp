@@ -1,7 +1,8 @@
 # AGENTS.md - CarDetailing App Governance
 
-Version: 2.1
+Version: 2.2
 Status: Mandatory
+Effective Date: 2026-04-20
 Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
 
 ## Identity and Scope
@@ -15,8 +16,29 @@ Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
 - `PROD_SAFE_FINAL_CONTROL` is mandatory for production-impacting changes.
 - Any critical decision (`G2/G3/G4`) requires decision trace in manager `DECISION_LOG.md`.
 
+## Dynamic Session Binding Standard
+- At session start, record `SESSION_OPEN` in manager `00_MASTER_CONTROL/DECISION_LOG.md` with:
+  - `codex_session_id`
+  - `claude_session_id`
+  - `started_at_utc`
+- The bound `claude_session_id` must remain unchanged for the full Codex session lifecycle.
+- Hardcoded session IDs in governance or runbook documents are forbidden.
+- Any session binding change requires explicit Owner approval and same-turn decision log trace.
+
+## Token-Saver Trace Minimum (Mandatory)
+- Required fields:
+  - `codex_session_id`
+  - `claude_session_id`
+  - `timeout_ms`
+  - `question`
+  - `options_considered`
+  - `recommendation`
+  - `residual_risk`
+- Placeholder values are forbidden (`TBD`, `N/A`, `none`, `unknown`, `placeholder`).
+
 ## Release Contract
 - No direct push to `main`; only PR + squash.
 - Required checks on `main`: `quality` and `validate-governance`.
 - `main` deploys staging only.
 - Production deploy remains tag-gated and owner-approved.
+- Any prod-impacting exception must be logged in manager `DECISION_LOG.md` and `PROD_CHANGE_REGISTER.md`.

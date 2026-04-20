@@ -32,6 +32,8 @@ const PATTERNS = [
   /xox[baprs]-[0-9A-Za-z-]{10,}/,
   /ghp_[0-9A-Za-z]{20,}/,
   /gho_[0-9A-Za-z]{20,}/,
+  /codex_session_id:\s*(N\/A|TBD|placeholder|none|unknown|hardcoded|test_session|REPLACE_ME)/gi,
+  /claude_session_id:\s*(N\/A|TBD|placeholder|none|unknown|hardcoded|test_session|REPLACE_ME)/gi,
 ];
 
 const findings = [];
