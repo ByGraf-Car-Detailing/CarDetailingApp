@@ -50,12 +50,14 @@ function assertRuntimeConfigShape(config, sourceLabel, { warnKeys = new Set() } 
 
 async function resolveFirebaseConfig() {
   const STAGING_PROJECT_ID = "cardetailingapp-e6c95-staging";
+  const isLocalHost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
   try {
     const response = await fetch("/__/firebase/init.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`init.json HTTP ${response.status}`);
     const json = await response.json();
-    const warnKeys = json?.projectId === STAGING_PROJECT_ID ? new Set(["appId"]) : new Set();
+    const warnKeys =
+      json?.projectId === STAGING_PROJECT_ID || isLocalHost ? new Set(["appId"]) : new Set();
     assertRuntimeConfigShape(json, "init.json", { warnKeys });
     return json;
   } catch (error) {
