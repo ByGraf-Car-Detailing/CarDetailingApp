@@ -10,6 +10,10 @@
 - `validate-governance`
 - `coworking-proof`
 
+`quality` includes runtime parity guard (`scripts/validate-runtime-contract.ps1`) that blocks PRs when:
+- Firebase runtime config contract is incomplete/incoherent.
+- staging/prod boundary assertions for staging-only lane are missing.
+
 `validate-governance` is enforced by `.github/workflows/governance-guard.yml` and must be green on PR and on `main` pushes.
 
 ## Identity and Co-Working
