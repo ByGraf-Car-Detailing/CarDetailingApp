@@ -32,7 +32,7 @@ Assert-Contains -Path ".firebaserc" -Pattern '"staging": "cardetailingapp-e6c95-
 
 # 2) Runtime config contract must require complete web config shape.
 Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern "REQUIRED_RUNTIME_CONFIG_KEYS" -Label "runtime required-key list"
-Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern "assertRuntimeConfigShape(json, ""init.json"")" -Label "runtime init.json shape check"
+Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern "assertRuntimeConfigShape(json, ""init.json""" -Label "runtime init.json shape check"
 Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern "assertRuntimeConfigShape(PROD_FALLBACK_CONFIG, ""local fallback"")" -Label "runtime local fallback shape check"
 Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern '"appId"' -Label "runtime appId key"
 Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern '"measurementId"' -Label "runtime measurementId key"
