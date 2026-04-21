@@ -3,6 +3,7 @@ import { db, auth } from "../services/authService.js";
 import { collection, addDoc, getDocs, getDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { showDashboard } from "../app.js";
 import { openModal, closeModal } from "../utils/modal.js";
+import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
 
 // DOM elements: step-by-step fields
 const formSection = document.getElementById("appointmentFormSection");
@@ -68,14 +69,6 @@ let state = {
   },
   noteInternal: "",
 };
-
-function resolveOperatorDisplayName(operatorData, operatorId = "") {
-  const localName = (localStorage.getItem("userName") || "").trim();
-  const authName = (auth.currentUser?.displayName || "").trim();
-  const profileName = typeof operatorData?.displayName === "string" ? operatorData.displayName.trim() : "";
-  const emailFallback = typeof operatorData?.email === "string" ? operatorData.email.trim() : "";
-  return profileName || authName || localName || emailFallback || operatorId || "";
-}
 
 function toPositiveInt(value, fallback = 0) {
   const n = Number.parseInt(String(value ?? "").trim(), 10);
@@ -163,10 +156,16 @@ async function renderStepOperator() {
   const q = query(collection(db, "allowedUsers"));
   const snap = await getDocs(q);
   snap.forEach(docSnap => {
-    const d = docSnap.data();
+    const d = docSnap.data() || {};
     const opt = document.createElement("option");
     opt.value = docSnap.id;
-    opt.textContent = `${d.role === "admin" ? "" : ""} ${d.displayName || docSnap.id}`;
+    const displayName = resolveOperatorDisplayName({
+      allowedDisplayName: d.displayName || "",
+      authDisplayName: "",
+      email: d.email || docSnap.id,
+      operatorId: docSnap.id,
+    }) || docSnap.id;
+    opt.textContent = displayName;
     select.appendChild(opt);
   });
 
@@ -178,7 +177,12 @@ async function renderStepOperator() {
     select.disabled = true;
     state.operatorId = currentUser;
     state.operatorData = snap.docs.find(d => d.id === currentUser)?.data() || {};
-    state.operatorData.displayName = resolveOperatorDisplayName(state.operatorData, state.operatorId);
+    state.operatorData.displayName = resolveOperatorDisplayName({
+      allowedDisplayName: state.operatorData.displayName || "",
+      authDisplayName: auth.currentUser?.displayName || "",
+      email: state.operatorData.email || state.operatorId || "",
+      operatorId: state.operatorId,
+    });
     renderStepCustomerType();
     stepOperator.appendChild(select);
     return;
@@ -187,7 +191,12 @@ async function renderStepOperator() {
   select.addEventListener("change", () => {
     state.operatorId = select.value;
     state.operatorData = snap.docs.find(d => d.id === select.value)?.data() || {};
-    state.operatorData.displayName = resolveOperatorDisplayName(state.operatorData, state.operatorId);
+    state.operatorData.displayName = resolveOperatorDisplayName({
+      allowedDisplayName: state.operatorData.displayName || "",
+      authDisplayName: auth.currentUser?.displayName || "",
+      email: state.operatorData.email || state.operatorId || "",
+      operatorId: state.operatorId,
+    });
     if (state.operatorId) renderStepCustomerType();
     else hideAfter(stepOperator);
   });
@@ -1479,7 +1488,12 @@ form.addEventListener("submit", async (e) => {
     state.operatorData.operatorId = state.operatorId || "";
   }
   if (!state.operatorData.displayName) {
-    state.operatorData.displayName = resolveOperatorDisplayName(state.operatorData, state.operatorId);
+    state.operatorData.displayName = resolveOperatorDisplayName({
+      allowedDisplayName: state.operatorData.displayName || "",
+      authDisplayName: auth.currentUser?.displayName || "",
+      email: state.operatorData.email || state.operatorId || "",
+      operatorId: state.operatorId,
+    });
   }
 
   const normalizedJobTypeData = state.jobTypeData

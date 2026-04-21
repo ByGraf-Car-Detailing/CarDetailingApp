@@ -6,9 +6,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 import {
   doc,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth, db } from "./firebaseRuntime.js";
+import { resolveOperatorDisplayName } from "./operatorIdentity.js";
 
 const provider = new GoogleAuthProvider();
 
@@ -26,10 +28,23 @@ async function checkAllowed(user) {
   }
 
   const userData = userSnap.data();
-  const displayName =
-    (typeof userData.displayName === "string" && userData.displayName.trim()) ||
-    user.displayName ||
-    email;
+  let storedDisplayName =
+    (typeof userData.displayName === "string" && userData.displayName.trim()) || "";
+  const runtimeDisplayName = (user.displayName || "").trim();
+  if (!storedDisplayName && runtimeDisplayName) {
+    try {
+      await setDoc(userRef, { displayName: runtimeDisplayName }, { merge: true });
+      storedDisplayName = runtimeDisplayName;
+    } catch (syncErr) {
+      console.warn("Impossibile sincronizzare displayName durante login:", syncErr?.message || syncErr);
+    }
+  }
+  const displayName = resolveOperatorDisplayName({
+    allowedDisplayName: storedDisplayName,
+    authDisplayName: runtimeDisplayName,
+    email,
+    operatorId: email,
+  });
   return { name: displayName, email, role: userData.role || "user" };
 }
 

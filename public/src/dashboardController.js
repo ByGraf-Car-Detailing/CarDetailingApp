@@ -1,4 +1,5 @@
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { resolveOperatorDisplayName } from "./services/operatorIdentity.js";
 
 export function createDashboardController({
   auth,
@@ -32,6 +33,7 @@ export function createDashboardController({
     let userRole;
     let userName;
     let userEmail;
+    let allowedDisplayName = "";
 
     if (userInfo) {
       userRole = userInfo.role || "user";
@@ -44,28 +46,36 @@ export function createDashboardController({
 
       const currentUser = auth.currentUser;
       if (currentUser) {
-        if (!userName) {
-          userName = currentUser.displayName || currentUser.email || "";
-          localStorage.setItem("userName", userName);
-        }
-
         if (!userEmail) {
           userEmail = currentUser.email || "";
           localStorage.setItem("userEmail", userEmail);
         }
 
-        if (!userRole || userRole === "user") {
+        if (!userRole || userRole === "user" || !userName) {
           try {
             const userRef = doc(db, "allowedUsers", currentUser.email);
             const userSnap = await getDoc(userRef);
             if (userSnap.exists()) {
-              userRole = userSnap.data().role || "user";
+              const userData = userSnap.data() || {};
+              userRole = userData.role || "user";
+              allowedDisplayName =
+                typeof userData.displayName === "string" ? userData.displayName.trim() : "";
               localStorage.setItem("userRole", userRole);
             }
           } catch (err) {
             console.error("Errore recupero ruolo:", err.message);
             userRole = userRole || "user";
           }
+        }
+
+        if (!userName) {
+          userName = resolveOperatorDisplayName({
+            allowedDisplayName,
+            authDisplayName: currentUser.displayName || "",
+            email: userEmail || currentUser.email || "",
+            operatorId: currentUser.email || "",
+          });
+          localStorage.setItem("userName", userName);
         }
       }
 
@@ -84,7 +94,7 @@ export function createDashboardController({
     roleButtons.innerHTML = "";
 
     const { userRole, userName, userEmail } = await resolveUserContext(userInfo);
-    const welcomeName = userName || userEmail || "utente";
+    const welcomeName = userName || resolveOperatorDisplayName({ email: userEmail, operatorId: userEmail }) || "utente";
     welcomeMsg.textContent = `Benvenuto ${welcomeName} (Ruolo: ${userRole})`;
 
     if (userRole === "admin" || userRole === "staff") {

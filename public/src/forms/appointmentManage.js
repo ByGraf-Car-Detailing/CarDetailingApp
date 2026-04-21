@@ -12,6 +12,7 @@ import {
   updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
 
 const EDIT_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -39,11 +40,15 @@ async function populateJobTypeFilter(select) {
 async function populateOperatorFilter(select) {
   select.innerHTML = `<option value="">Tutti</option>`;
   const snap = await getDocs(collection(db, "allowedUsers"));
-  snap.forEach(doc => {
-    const d = doc.data();
+  snap.forEach((docSnap) => {
+    const d = docSnap.data() || {};
     const opt = document.createElement("option");
-    opt.value = doc.id;
-    opt.textContent = d.displayName || doc.id;
+    opt.value = docSnap.id;
+    opt.textContent = resolveOperatorDisplayName({
+      allowedDisplayName: d.displayName || "",
+      email: d.email || docSnap.id,
+      operatorId: docSnap.id,
+    }) || docSnap.id;
     select.appendChild(opt);
   });
 }
@@ -67,10 +72,11 @@ export async function loadAppointments() {
   const operatorDisplayById = new Map();
   allowedUsersSnap.forEach((docSnap) => {
     const d = docSnap.data() || {};
-    const displayName =
-      (typeof d.displayName === "string" && d.displayName.trim()) ||
-      (typeof d.email === "string" && d.email.trim()) ||
-      docSnap.id;
+    const displayName = resolveOperatorDisplayName({
+      allowedDisplayName: d.displayName || "",
+      email: d.email || docSnap.id,
+      operatorId: docSnap.id,
+    }) || docSnap.id;
     operatorDisplayById.set(docSnap.id, displayName);
   });
   await populateOperatorFilter(filterOperator);
@@ -424,10 +430,14 @@ export async function loadAppointments() {
     if (data.operatorData?.operatorId && operatorDisplayMap?.has(data.operatorData.operatorId)) {
       return operatorDisplayMap.get(data.operatorData.operatorId);
     }
-    if (data.operatorData?.email) return data.operatorData.email;
-    if (data.operatorData?.operatorId) return data.operatorData.operatorId;
-    if (data.operatorId) return data.operatorId;
-    return "N/D";
+    return (
+      resolveOperatorDisplayName({
+        allowedDisplayName: data.operatorData?.displayName || "",
+        authDisplayName: "",
+        email: data.operatorData?.email || data.operatorId || "",
+        operatorId: data.operatorData?.operatorId || data.operatorId || "",
+      }) || "N/D"
+    );
   }
 
   function formatStatus(status) {

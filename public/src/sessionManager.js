@@ -8,6 +8,7 @@ import {
   getDoc,
   setDoc,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { resolveOperatorDisplayName } from "./services/operatorIdentity.js";
 
 let initialized = false;
 
@@ -61,11 +62,15 @@ export function initSessionManager({
       storedDisplayName = typeof userData.displayName === "string" ? userData.displayName.trim() : "";
       localStorage.setItem("userRole", userRole);
 
-      // Best effort metadata sync: only admin can update allowedUsers by current rules.
+      // Best effort metadata sync: fill missing displayName only, never overwrite an existing non-empty value.
       const runtimeDisplayName = (user.displayName || "").trim();
-      if (userRole === "admin" && runtimeDisplayName && runtimeDisplayName !== storedDisplayName) {
-        await setDoc(userRef, { displayName: runtimeDisplayName }, { merge: true });
-        storedDisplayName = runtimeDisplayName;
+      if (!storedDisplayName && runtimeDisplayName) {
+        try {
+          await setDoc(userRef, { displayName: runtimeDisplayName }, { merge: true });
+          storedDisplayName = runtimeDisplayName;
+        } catch (syncErr) {
+          console.warn("Impossibile sincronizzare displayName su allowedUsers:", syncErr?.message || syncErr);
+        }
       }
     } catch (err) {
       console.error("Errore verifica ruolo:", err.message);
@@ -75,7 +80,12 @@ export function initSessionManager({
       return;
     }
 
-    const resolvedName = storedDisplayName || user.displayName || user.email || "";
+    const resolvedName = resolveOperatorDisplayName({
+      allowedDisplayName: storedDisplayName,
+      authDisplayName: user.displayName || "",
+      email: user.email || "",
+      operatorId: user.email || "",
+    });
     const userInfo = {
       name: resolvedName,
       email: user.email,
