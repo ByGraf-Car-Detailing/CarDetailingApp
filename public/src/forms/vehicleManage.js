@@ -40,6 +40,11 @@ const EDIT_ICON = `
     <path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/>
   </svg>
 `;
+const VIEW_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Zm10.5 4.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" fill="currentColor"/>
+  </svg>
+`;
 const DELETE_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9Z" fill="currentColor"/>
@@ -82,6 +87,7 @@ export async function loadVehicles() {
       if (s.exists()) {
         const c = s.data();
         ownerLabel = c.type === "company" ? c.companyName : `${c.firstName || ""} ${c.lastName || ""}`.trim();
+        data.ownerType = c.type || "person";
       }
     }
     all.push({ id: d.id, ...data, ownerLabel });
@@ -108,6 +114,7 @@ searchBtn.addEventListener("click", async () => {
       if (s.exists()) {
         const c = s.data();
         ownerLabel = c.type === "company" ? c.companyName : `${c.firstName || ""} ${c.lastName || ""}`.trim();
+        data.ownerType = c.type || "person";
       }
     }
     if ((plate && !data.licensePlate?.toLowerCase().includes(plate)) ||
@@ -147,12 +154,13 @@ function renderList(docs) {
 
   const table = document.createElement("table");
   const columns = [
-    { key: "owner", label: "Proprietario", getValue: (v) => v.ownerLabel || "" },
-    { key: "brand", label: "Marca", getValue: (v) => v.brand || "" },
-    { key: "model", label: "Modello", getValue: (v) => v.model || "" },
-    { key: "year", label: "Anno", getValue: (v) => Number(v.year) || 0 },
-    { key: "plate", label: "Targa", getValue: (v) => v.licensePlate || "" },
-    { key: "chassis", label: "Nr. Telaio", getValue: (v) => v.chassisNumber || "" },
+    { key: "owner", label: "Proprietario", className: "cell-mobile-wrap", getValue: (v) => v.ownerLabel || "" },
+    { key: "vehicleMobile", label: "Veicolo", className: "show-mobile cell-mobile-wrap", sortable: false, getValue: (v) => `${v.brand || ""} ${v.model || ""}`.trim() },
+    { key: "brand", label: "Marca", className: "hide-mobile", getValue: (v) => v.brand || "" },
+    { key: "model", label: "Modello", className: "hide-mobile", getValue: (v) => v.model || "" },
+    { key: "year", label: "Anno", className: "hide-mobile", getValue: (v) => Number(v.year) || 0 },
+    { key: "plate", label: "Targa", className: "hide-mobile", getValue: (v) => v.licensePlate || "" },
+    { key: "chassis", label: "Nr. Telaio", className: "hide-mobile", getValue: (v) => v.chassisNumber || "" },
     { key: null, label: "Azioni", className: "actions-column", sortable: false },
   ];
   const thead = document.createElement("thead");
@@ -179,15 +187,19 @@ function renderList(docs) {
   });
 
   sortedDocs.forEach(v => {
+    const ownerCell = formatOwnerCell(v.ownerLabel, v.ownerType);
+    const vehicleMobileCard = formatVehicleMobileCard(v);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${v.ownerLabel}</td>
-      <td>${v.brand}</td>
-      <td>${v.model}</td>
-      <td>${v.year || ""}</td>
-      <td>${v.licensePlate}</td>
-      <td>${v.chassisNumber}</td>
+      <td class="cell-mobile-wrap">${ownerCell}</td>
+      <td class="show-mobile cell-mobile-wrap">${vehicleMobileCard}</td>
+      <td class="hide-mobile">${v.brand}</td>
+      <td class="hide-mobile">${v.model}</td>
+      <td class="hide-mobile">${v.year || ""}</td>
+      <td class="hide-mobile">${v.licensePlate}</td>
+      <td class="hide-mobile">${v.chassisNumber}</td>
       <td class="actions-column">
+        <button class="btn btn--icon btn--view viewBtn" data-id="${v.id}" title="Visualizza" aria-label="Visualizza veicolo">${VIEW_ICON}</button>
         <button class="btn btn--icon btn--ghost editBtn" data-id="${v.id}" title="Modifica" aria-label="Modifica veicolo">${EDIT_ICON}</button>
         <button class="btn btn--icon btn--danger deleteBtn" data-id="${v.id}" title="Elimina" aria-label="Elimina veicolo">${DELETE_ICON}</button>
       </td>`;
@@ -200,6 +212,10 @@ function renderList(docs) {
     const btn = e.target.closest("button");
     if (!btn) return;
     const id = btn.dataset.id;
+    if (btn.classList.contains("viewBtn")) {
+      const item = docs.find((v) => v.id === id);
+      if (item) showVehicleViewModal(item);
+    }
     if (btn.classList.contains("editBtn")) await openVehicleEditModal(id);
     if (btn.classList.contains("deleteBtn")) {
       if (confirm("Sei sicuro di voler cancellare questo veicolo?")) {
@@ -208,6 +224,54 @@ function renderList(docs) {
         loadVehicles();
       }
     }
+  });
+}
+
+function formatOwnerCell(ownerLabel, ownerType) {
+  if (!ownerLabel) return "N/D";
+  if (ownerType !== "person") {
+    return `<span class="desktop-inline-name">${ownerLabel}</span>`;
+  }
+  const parts = ownerLabel.trim().split(/\s+/);
+  const firstName = parts.shift() || "";
+  const lastName = parts.join(" ") || "";
+  return `
+    <span class="desktop-inline-name">${ownerLabel}</span>
+    <span class="mobile-person-stack">
+      <span>${firstName || "-"}</span>
+      <span>${lastName || "-"}</span>
+    </span>
+  `;
+}
+
+function formatVehicleMobileCard(vehicle) {
+  return `
+    <div class="vehicle-mobile-card">
+      <div>${vehicle.brand || "-"}</div>
+      <div>${vehicle.model || "-"}</div>
+      <div>${vehicle.year || "-"}</div>
+      <div>${vehicle.licensePlate || "-"}</div>
+    </div>
+  `;
+}
+
+function showVehicleViewModal(vehicle) {
+  const content = document.createElement("div");
+  content.className = "client-view-modal";
+  content.innerHTML = `
+    <div class="client-view-row"><strong>Proprietario:</strong> ${vehicle.ownerLabel || "N/D"}</div>
+    <div class="client-view-row"><strong>Marca:</strong> ${vehicle.brand || "N/D"}</div>
+    <div class="client-view-row"><strong>Modello:</strong> ${vehicle.model || "N/D"}</div>
+    <div class="client-view-row"><strong>Anno:</strong> ${vehicle.year || "N/D"}</div>
+    <div class="client-view-row"><strong>Targa:</strong> ${vehicle.licensePlate || "N/D"}</div>
+    <div class="client-view-row"><strong>N. Telaio:</strong> ${vehicle.chassisNumber || "N/D"}</div>
+    <div class="client-view-row"><strong>Colore:</strong> ${vehicle.color || "-"}</div>
+  `;
+
+  openModal({
+    title: "Dettagli Veicolo",
+    content,
+    noModalCancelBtn: false,
   });
 }
 

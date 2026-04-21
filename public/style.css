@@ -139,6 +139,21 @@ section,
   margin: var(--space-4) auto;
 }
 
+@media (min-width: 1024px) {
+  section,
+  #dashboardContainer {
+    width: calc(100vw - 40px);
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #loginContainer {
+    width: min(450px, calc(100vw - 40px));
+    max-width: 450px;
+  }
+}
+
 @media (max-width: 767px) {
   section,
   #loginContainer,
@@ -468,6 +483,23 @@ td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.cell-mobile-wrap {
+  white-space: nowrap;
+}
+
+.desktop-inline-name {
+  display: inline;
+}
+
+.mobile-person-stack {
+  display: none;
+}
+
+.vehicle-mobile-card {
+  display: grid;
+  gap: 2px;
 }
 
 .appointment-inline-details {
@@ -1021,6 +1053,20 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     overflow-x: auto;
   }
 
+  .cell-mobile-wrap {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  .desktop-inline-name {
+    display: none !important;
+  }
+
+  .mobile-person-stack {
+    display: grid;
+    gap: 2px;
+  }
+
   .actions-column .btn {
     margin-top: 6px;
   }
@@ -1042,6 +1088,11 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   
   .show-mobile {
     display: inline !important;
+  }
+
+  th.show-mobile,
+  td.show-mobile {
+    display: table-cell !important;
   }
 }
 
