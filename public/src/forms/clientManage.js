@@ -214,6 +214,9 @@ function renderList(docs) {
     const fullName = d.type === "company"
       ? d.companyName
       : `${d.firstName || ""} ${d.lastName || ""}`.trim();
+    const nameCell = formatClientNameCell(d, fullName);
+    const email = d.email || "";
+    const emailCell = email ? `<a href="mailto:${encodeURIComponent(email)}">${email}</a>` : "";
 
     const tipoFull = d.type === "person" ? "Privato" : "Ditta";
     const tipoShort = d.type === "person" ? "P" : "D";
@@ -224,8 +227,8 @@ function renderList(docs) {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${fullName}</td>
-      <td class="hide-mobile">${d.email || ""}</td>
+      <td class="cell-mobile-wrap">${nameCell}</td>
+      <td class="hide-mobile">${emailCell}</td>
       <td><span class="show-desktop">${tipoFull}</span><span class="show-mobile">${tipoShort}</span></td>
       <td><span class="badge show-desktop" data-active="${isActive}">${statoFull}</span><span class="badge ${statoClass} show-mobile">${statoShort}</span></td>
       <td class="actions-column">
@@ -256,6 +259,21 @@ function renderList(docs) {
   });
 }
 
+function formatClientNameCell(client, fullName) {
+  if (client.type !== "person") {
+    return `<span class="desktop-inline-name">${fullName || "N/D"}</span>`;
+  }
+  const firstName = client.firstName || "";
+  const lastName = client.lastName || "";
+  return `
+    <span class="desktop-inline-name">${fullName || "N/D"}</span>
+    <span class="mobile-person-stack">
+      <span>${firstName || "-"}</span>
+      <span>${lastName || "-"}</span>
+    </span>
+  `;
+}
+
 // Modal visualizzazione cliente (solo lettura)
 async function showClientViewModal(clientId) {
   const ref = doc(db, "clients", clientId);
@@ -273,6 +291,13 @@ async function showClientViewModal(clientId) {
   
   const tipo = d.type === "person" ? "Privato" : "Ditta";
   const isActive = d.active !== false;
+  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+  const email = d.email || "";
+  const phone = d.phone || "";
+  const emailCell = email ? `<a href="mailto:${encodeURIComponent(email)}">${email}</a>` : "-";
+  const phoneCell = phone
+    ? (isMobile ? `<a href="tel:${sanitizePhone(phone)}">${phone}</a>` : phone)
+    : "-";
   
   // Costruisci indirizzo
   let indirizzo = "";
@@ -287,8 +312,8 @@ async function showClientViewModal(clientId) {
   content.innerHTML = `
     <div class="client-view-row"><strong>Nome:</strong> ${fullName}</div>
     <div class="client-view-row"><strong>Tipo:</strong> ${tipo}</div>
-    <div class="client-view-row"><strong>Email:</strong> ${d.email || "-"}</div>
-    <div class="client-view-row"><strong>Telefono:</strong> ${d.phone || "-"}</div>
+    <div class="client-view-row"><strong>Email:</strong> ${emailCell}</div>
+    <div class="client-view-row"><strong>Telefono:</strong> ${phoneCell}</div>
     <div class="client-view-row"><strong>Indirizzo:</strong> ${indirizzo || "-"}</div>
     ${d.fiscalCode ? `<div class="client-view-row"><strong>P.IVA/CF:</strong> ${d.fiscalCode}</div>` : ""}
     ${d.note ? `<div class="client-view-row"><strong>Note:</strong> ${d.note}</div>` : ""}
@@ -300,6 +325,10 @@ async function showClientViewModal(clientId) {
     content: content,
     noModalCancelBtn: false
   });
+}
+
+function sanitizePhone(phone) {
+  return String(phone || "").replace(/[^\d+]/g, "");
 }
 
 export { renderList };

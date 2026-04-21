@@ -279,9 +279,7 @@ export async function loadAppointments() {
       tieBreaker: (d) => d.id || "",
     });
     sortedAppointments.forEach(d => {
-      const cliente = d.customerData?.type === "company"
-        ? d.customerData.companyName
-        : `${d.customerData?.firstName || ""} ${d.customerData?.lastName || ""}`.trim();
+      const cliente = formatCustomerCell(d.customerData);
       const targa = d.vehicleData?.licensePlate || "";
       const stato = d.status || "";
       const dataLavorazione = d.startWork ? formatDateTime(d.startWork) : "";
@@ -296,7 +294,7 @@ export async function loadAppointments() {
   
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${cliente}</td>
+        <td class="cell-mobile-wrap">${cliente}</td>
         <td>${targa}</td>
         <td class="hide-mobile">${formatStatus(stato)}</td>
         <td class="hide-mobile">${dataLavorazione}</td>
@@ -527,6 +525,23 @@ export async function loadAppointments() {
   function formatCliente(c) {
     if (!c) return "";
     return c.type === "company" ? c.companyName : `${c.firstName || ""} ${c.lastName || ""}`.trim();
+  }
+
+  function formatCustomerCell(c) {
+    if (!c) return "N/D";
+    if (c.type === "company") {
+      return `<span class="desktop-inline-name">${c.companyName || "N/D"}</span>`;
+    }
+    const firstName = c.firstName || "";
+    const lastName = c.lastName || "";
+    const fullName = `${firstName} ${lastName}`.trim() || "N/D";
+    return `
+      <span class="desktop-inline-name">${fullName}</span>
+      <span class="mobile-person-stack">
+        <span>${firstName || "-"}</span>
+        <span>${lastName || "-"}</span>
+      </span>
+    `;
   }
   
   function formatVeicolo(v) {
