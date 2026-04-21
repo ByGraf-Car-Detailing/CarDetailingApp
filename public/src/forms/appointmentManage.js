@@ -13,6 +13,13 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
+import {
+  buildSortableHeaderRow,
+  loadSortState,
+  resolveSortUserKey,
+  saveSortState,
+  sortRows,
+} from "../utils/tableSort.js";
 
 const EDIT_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -24,6 +31,8 @@ const DELETE_ICON = `
     <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9Z" fill="currentColor"/>
   </svg>
 `;
+const APPOINTMENTS_TABLE_ID = "appointments.manage";
+const DEFAULT_APPOINTMENTS_SORT = { key: "workDate", direction: "desc" };
 
 async function populateJobTypeFilter(select) {
   select.innerHTML = `<option value="">Tutti</option>`;
@@ -86,6 +95,15 @@ export async function loadAppointments() {
 
   let userRole = localStorage.getItem("userRole");
   let userEmail = auth.currentUser?.email || window.userEmail || "";
+  const appointmentsSortUserKey = resolveSortUserKey({
+    authUser: auth.currentUser,
+    fallbackEmail: window.userEmail || "",
+  });
+  let appointmentsSortState = loadSortState({
+    tableId: APPOINTMENTS_TABLE_ID,
+    userKey: appointmentsSortUserKey,
+    defaultState: DEFAULT_APPOINTMENTS_SORT,
+  });
 
   // Listener "Nuovo appuntamento"
   if (newAppointmentBtn && !newAppointmentBtn._listenerAttached) {
@@ -198,24 +216,71 @@ export async function loadAppointments() {
     }
   
     const table = document.createElement("table");
+    const columns = [
+      {
+        key: "customer",
+        label: "Cliente",
+        getValue: (d) => (
+          d.customerData?.type === "company"
+            ? d.customerData.companyName
+            : `${d.customerData?.firstName || ""} ${d.customerData?.lastName || ""}`.trim()
+        ),
+      },
+      {
+        key: "vehicle",
+        label: "Veicolo",
+        getValue: (d) => `${d.vehicleData?.brand || ""} ${d.vehicleData?.model || ""}`.trim(),
+      },
+      {
+        key: "plate",
+        label: "Targa",
+        getValue: (d) => d.vehicleData?.licensePlate || "",
+      },
+      {
+        key: "operator",
+        label: "Operatore",
+        getValue: (d) => formatOperatore(d, operatorDisplayById),
+      },
+      {
+        key: "status",
+        label: "Stato",
+        getValue: (d) => d.status || "",
+      },
+      {
+        key: "workDate",
+        label: "Data lavorazione",
+        getValue: (d) => d.startWork || "",
+      },
+      {
+        key: null,
+        label: "Azioni",
+        className: "actions-column",
+        sortable: false,
+      },
+    ];
     const thead = document.createElement("thead");
-    thead.innerHTML = `
-      <tr>
-        <th>Cliente</th>
-        <th>Veicolo</th>
-        <th>Targa</th>
-        <th>N TELAIO</th>
-        <th>Tipo Lavoro</th>
-        <th>Operatore</th>
-        <th>Stato</th>
-        <th>Data lavorazione</th>
-        <th class="actions-column">Azioni</th>
-      </tr>
-    `;
+    thead.appendChild(buildSortableHeaderRow({
+      columns,
+      state: appointmentsSortState,
+      onSortChange: (nextState) => {
+        appointmentsSortState = nextState;
+        saveSortState({
+          tableId: APPOINTMENTS_TABLE_ID,
+          userKey: appointmentsSortUserKey,
+          state: appointmentsSortState,
+        });
+        renderList(appointments);
+      },
+    }));
     table.appendChild(thead);
   
     const tbody = document.createElement("tbody");
-    appointments.forEach(d => {
+    const sortedAppointments = sortRows(appointments, {
+      state: appointmentsSortState,
+      columns,
+      tieBreaker: (d) => d.id || "",
+    });
+    sortedAppointments.forEach(d => {
       const cliente = d.customerData?.type === "company"
         ? d.customerData.companyName
         : `${d.customerData?.firstName || ""} ${d.customerData?.lastName || ""}`.trim();
@@ -240,10 +305,14 @@ export async function loadAppointments() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${cliente}</td>
-        <td>${veicolo}</td>
+        <td>
+          <div>${veicolo}</div>
+          <div class="appointment-inline-details">
+            <span><strong>Telaio:</strong> ${telaio}</span>
+            <span><strong>Lavoro:</strong> ${jobType || "N/D"}</span>
+          </div>
+        </td>
         <td>${targa}</td>
-        <td>${telaio}</td>
-        <td>${jobType}</td>
         <td>${operatore}</td>
         <td>${formatStatus(stato)}</td>
         <td>${dataLavorazione}</td>

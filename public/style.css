@@ -427,6 +427,40 @@ th {
   white-space: nowrap;
 }
 
+.th-sortable {
+  padding: 0;
+}
+
+.th-sort-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.th-sort-btn:hover {
+  color: var(--text);
+}
+
+.th-sort-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.sort-indicator {
+  color: var(--gold);
+  font-size: 11px;
+}
+
 td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
@@ -434,6 +468,20 @@ td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.appointment-inline-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.appointment-inline-details strong {
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 tr:last-child td {
@@ -975,6 +1023,11 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
   .actions-column .btn {
     margin-top: 6px;
+  }
+
+  .appointment-inline-details {
+    flex-direction: column;
+    gap: 4px;
   }
 
   .accordion-header {

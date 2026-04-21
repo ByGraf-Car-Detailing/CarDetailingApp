@@ -1,4 +1,4 @@
-import { db } from "../services/authService.js";
+import { db, auth } from "../services/authService.js";
 import {
   collection,
   query,
@@ -10,6 +10,13 @@ import {
 import { showDashboard } from "../app.js";
 import { resetClientForm } from "./clientForm.js";
 import { openModal, closeModal } from "../utils/modal.js";
+import {
+  buildSortableHeaderRow,
+  loadSortState,
+  resolveSortUserKey,
+  saveSortState,
+  sortRows,
+} from "../utils/tableSort.js";
 
 // DOM Elements
 const backBtn = document.getElementById("backToDashboardClientsBtn");
@@ -23,6 +30,10 @@ const resetBtn = document.getElementById("resetClientsBtnManage");
 const searchInactive = document.getElementById("searchIncludeInactive");
 const list = document.getElementById("clientsList");
 const clientManageSection = document.getElementById("clientManageSection");
+const CLIENTS_TABLE_ID = "clients.manage";
+const DEFAULT_CLIENTS_SORT = { key: "name", direction: "asc" };
+let clientsSortState = { ...DEFAULT_CLIENTS_SORT };
+let clientsSortUserKey = null;
 
 const VIEW_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -125,6 +136,19 @@ resetBtn.addEventListener("click", () => {
 
 // Render elenco clienti
 function renderList(docs) {
+  const currentUserKey = resolveSortUserKey({
+    authUser: auth.currentUser,
+    fallbackEmail: window.userEmail || "",
+  });
+  if (clientsSortUserKey !== currentUserKey) {
+    clientsSortUserKey = currentUserKey;
+    clientsSortState = loadSortState({
+      tableId: CLIENTS_TABLE_ID,
+      userKey: clientsSortUserKey,
+      defaultState: DEFAULT_CLIENTS_SORT,
+    });
+  }
+
   list.innerHTML = "";
   if (docs.length === 0) {
     list.textContent = "Nessun cliente trovato.";
@@ -132,22 +156,61 @@ function renderList(docs) {
   }
 
   const table = document.createElement("table");
-
+  const columns = [
+    {
+      key: "name",
+      label: "Nome / Azienda",
+      getValue: (d) => (d.type === "company"
+        ? d.companyName
+        : `${d.firstName || ""} ${d.lastName || ""}`.trim()),
+    },
+    {
+      key: "email",
+      label: "Email",
+      className: "hide-mobile",
+      getValue: (d) => d.email || "",
+    },
+    {
+      key: "type",
+      label: "Tipo",
+      getValue: (d) => (d.type === "person" ? "Privato" : "Ditta"),
+    },
+    {
+      key: "status",
+      label: "Stato",
+      getValue: (d) => (d.active !== false ? 1 : 0),
+    },
+    {
+      key: null,
+      label: "Azioni",
+      className: "actions-column",
+      sortable: false,
+    },
+  ];
   const thead = document.createElement("thead");
-  thead.innerHTML = `
-    <tr>
-      <th>Nome / Azienda</th>
-      <th class="hide-mobile">Email</th>
-      <th>Tipo</th>
-      <th>Stato</th>
-      <th class="actions-column">Azioni</th>
-    </tr>
-  `;
+  thead.appendChild(buildSortableHeaderRow({
+    columns,
+    state: clientsSortState,
+    onSortChange: (nextState) => {
+      clientsSortState = nextState;
+      saveSortState({
+        tableId: CLIENTS_TABLE_ID,
+        userKey: clientsSortUserKey,
+        state: clientsSortState,
+      });
+      renderList(docs);
+    },
+  }));
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
+  const sortedDocs = sortRows(docs, {
+    state: clientsSortState,
+    columns,
+    tieBreaker: (d) => d.id || "",
+  });
 
-  docs.forEach(d => {
+  sortedDocs.forEach(d => {
     const fullName = d.type === "company"
       ? d.companyName
       : `${d.firstName || ""} ${d.lastName || ""}`.trim();
