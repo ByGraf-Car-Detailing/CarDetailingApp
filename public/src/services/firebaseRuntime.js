@@ -29,14 +29,9 @@ function assertRuntimeConfigShape(config, sourceLabel, { warnKeys = new Set() } 
 
   const errors = missing.filter((key) => !warnKeys.has(key));
   const warnings = missing.filter((key) => warnKeys.has(key));
-
-  if (warnings.length > 0) {
-    console.warn(
-      `[firebase] ${sourceLabel} missing optional-on-env keys: ${warnings.join(
-        ", "
-      )} (feature degradation expected)`
-    );
-  }
+  // Optional keys intentionally missing on specific environments should not pollute console output.
+  // The contract remains enforced because only non-optional keys enter `errors`.
+  void warnings;
 
   if (errors.length > 0) {
     throw new Error(`[firebase] ${sourceLabel} missing required keys: ${errors.join(", ")}`);
