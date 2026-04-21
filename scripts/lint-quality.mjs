@@ -61,6 +61,39 @@ const functionsToCheck = [
   { name: "showDashboard", max: 35 },
 ];
 
+const forbiddenAppPatterns = [
+  {
+    pattern: /firebase-firestore\.js/i,
+    message: "app.js must not import Firestore primitives directly; move data logic to dedicated modules.",
+  },
+  {
+    pattern: /\bcollection\s*\(/,
+    message: "app.js must not query Firestore directly (collection()).",
+  },
+  {
+    pattern: /\bgetDocs\s*\(/,
+    message: "app.js must not query Firestore directly (getDocs()).",
+  },
+  {
+    pattern: /\bquery\s*\(/,
+    message: "app.js must not query Firestore directly (query()).",
+  },
+  {
+    pattern: /\bwhere\s*\(/,
+    message: "app.js must not query Firestore directly (where()).",
+  },
+  {
+    pattern: /\baddRoleButton\s*\(/,
+    message: "app.js must not define or call addRoleButton directly; dashboard rendering belongs to dashboardController.",
+  },
+];
+
+for (const rule of forbiddenAppPatterns) {
+  if (rule.pattern.test(appJs)) {
+    errors.push(rule.message);
+  }
+}
+
 for (const fn of functionsToCheck) {
   const body = extractFunctionBody(appJs, fn.name);
   if (!body) {

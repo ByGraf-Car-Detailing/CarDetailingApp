@@ -1,21 +1,15 @@
 // src/app.js
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth, db } from "./services/authService.js";
 import { hideSteps } from "./forms/vehicleForm.js";
 import { initGlobalErrorHandling } from "./errorHandler.js";
 import { initSessionManager } from "./sessionManager.js";
 import { initRouter } from "./router.js";
+import { createDashboardController } from "./dashboardController.js";
+import { createViewEffects } from "./viewEffects.js";
+import { createDataIntegrityChecks } from "./dataIntegrityChecks.js";
 
 const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-3";
 
-// DOM
 const loginContainer = document.getElementById("loginContainer");
 const dashboardContainer = document.getElementById("dashboardContainer");
 const clientFormSection = document.getElementById("clientFormSection");
@@ -33,10 +27,11 @@ const appointmentFormSection = document.getElementById("appointmentFormSection")
 const catalogSyncSection = document.getElementById("catalogSyncSection");
 
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
-const HOSTNAME = window.location.hostname;
-const IS_LOCAL_RUNTIME = HOSTNAME === "localhost" || HOSTNAME === "127.0.0.1";
-const IS_STAGING_PROJECT = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
-const IS_STAGING_RUNTIME = IS_STAGING_PROJECT || IS_LOCAL_RUNTIME;
+const hostname = window.location.hostname;
+const isLocalRuntime = hostname === "localhost" || hostname === "127.0.0.1";
+const isStagingProject = window.__FIREBASE_PROJECT_ID__ === "cardetailingapp-e6c95-staging";
+const IS_STAGING_RUNTIME = isStagingProject || isLocalRuntime;
+
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
@@ -46,14 +41,59 @@ const sectionByView = [
   { key: "formClienti", el: clientFormSection },
   { key: "modificaClienti", el: clientEditSection },
 ];
+
+function hideAllSections() {
+  dashboardContainer.style.display = "none";
+  clientFormSection.style.display = "none";
+  clientEditSection.style.display = "none";
+  clientManageSection.style.display = "none";
+  vehicleFormSection.style.display = "none";
+  vehicleManageSection.style.display = "none";
+  appointmentManageSection.style.display = "none";
+  appointmentFormSection.style.display = "none";
+  catalogSyncSection.style.display = "none";
+  roleButtons.style.display = "none";
+}
+
 const router = initRouter({ sectionByView, hideAllSections });
 
-// Nascondi tutto all'avvio
-dashboardContainer.style.display = "none";
-clientFormSection.style.display = "none";
-clientEditSection.style.display = "none";
-vehicleFormSection.style.display = "none";
-alertBanner.style.display = "none";
+const viewEffects = createViewEffects({
+  sections: {
+    vehicleManageSection,
+    clientManageSection,
+    appointmentManageSection,
+    appointmentFormSection,
+    catalogSyncSection,
+  },
+  runtimeBuildTag: RUNTIME_BUILD_TAG,
+  isStagingRuntime: IS_STAGING_RUNTIME,
+  router,
+  onGoToDashboard: () => {
+    void showDashboard();
+  },
+});
+
+function navigateToView(viewKey) {
+  hideAllSections();
+  viewEffects.applyCurrentViewEffects(viewKey);
+  router.setCurrentView(viewKey);
+}
+
+const dashboardController = createDashboardController({
+  auth,
+  db,
+  hideAllSections,
+  loginContainer,
+  dashboardContainer,
+  logoutBtn,
+  roleButtons,
+  welcomeMsg,
+  isStagingRuntime: IS_STAGING_RUNTIME,
+  onNavigate: navigateToView,
+  hideSteps,
+});
+
+const dataIntegrityChecks = createDataIntegrityChecks({ db, alertBanner });
 
 function showLoginState() {
   hideAllSections();
@@ -64,7 +104,7 @@ function showLoginState() {
 
 function goToDashboard() {
   router.clearCurrentView();
-  showDashboard();
+  void showDashboard();
 }
 
 function bindDashboardBackButtons() {
@@ -82,11 +122,26 @@ function bindDashboardBackButtons() {
   for (const id of backToDashboardIds) {
     const el = document.getElementById(id);
     if (!el) continue;
+
     el.onclick = (evt) => {
       evt.preventDefault();
       goToDashboard();
     };
   }
+}
+
+function updateUI(userInfo) {
+  loginContainer.style.display = "none";
+  logoutBtn.style.display = "inline-block";
+
+  const restoredView = router.restoreCurrentView();
+  if (restoredView) {
+    hideAllSections();
+    viewEffects.applyCurrentViewEffects(restoredView);
+    return;
+  }
+
+  void showDashboard(userInfo);
 }
 
 const sessionController = initSessionManager({
@@ -96,230 +151,28 @@ const sessionController = initSessionManager({
   logoutBtn,
   onAuthenticated: updateUI,
   onLoggedOut: showLoginState,
-  onPostAuthCheck: checkInvalidContacts,
+  onPostAuthCheck: dataIntegrityChecks.checkInvalidContacts,
 });
-
-window.addEventListener("beforeunload", () => {
-  sessionController.teardown();
-});
-
-bindDashboardBackButtons();
-
-// Funzione UI centrale
-function updateUI(userInfo) {
-  loginContainer.style.display = "none";
-  logoutBtn.style.display = "inline-block";
-
-  const restoredView = router.restoreCurrentView();
-  if (restoredView) {
-    applyCurrentViewEffects(restoredView);
-    return;
-  }
-
-  showDashboard(userInfo);
-}
-
-
-// Utility per nascondere tutte le sezioni
-function hideAllSections() {
-  dashboardContainer.style.display = "none";
-  clientFormSection.style.display = "none";
-  clientEditSection.style.display = "none";
-  clientManageSection.style.display = "none";
-  vehicleFormSection.style.display = "none";
-  vehicleManageSection.style.display = "none";
-  appointmentManageSection.style.display = "none";
-  appointmentFormSection.style.display = "none";
-  catalogSyncSection.style.display = "none";
-  roleButtons.style.display = "none";
-}
-
-// Pulsanti dinamici
-function addRoleButton(label, action) {
-  const btn = document.createElement("button");
-  btn.className = "btn btn--primary";
-  btn.textContent = label;
-
-  const id = "dash-" + label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  btn.dataset.testid = id;
-
-  btn.addEventListener("click", action);
-  roleButtons.appendChild(btn);
-}
-
-function applyCurrentViewEffects(viewKey) {
-  if (viewKey === "gestioneVeicoli") {
-    import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadVehicles());
-    return;
-  }
-  if (viewKey === "gestioneClienti") {
-    import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadClients());
-    return;
-  }
-  if (viewKey === "gestioneAppuntamenti") {
-    import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then((m) => m.loadAppointments());
-    return;
-  }
-  if (viewKey === "nuovoAppuntamento") {
-    import("./forms/appointmentForm.js").then((m) => m.resetAppointmentForm());
-    return;
-  }
-  if (viewKey === "catalogSyncAdmin") {
-    if (!IS_STAGING_RUNTIME) {
-      router.clearCurrentView();
-      showDashboard();
-      return;
-    }
-    import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
-  }
-}
-
-// Controlla se ci sono contatti orfani
-async function checkInvalidContacts() {
-  const invalidContacts = [];
-
-  try {
-    const q = query(
-      collection(db, "clients"),
-      where("type", "==", "person"),
-      where("isContact", "==", true),
-      where("active", "==", true)
-    );
-
-    const snap = await getDocs(q);
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      const companyId = data.companyId;
-      if (companyId) {
-        const companyRef = doc(db, "clients", companyId);
-        const companySnap = await getDoc(companyRef);
-        if (!companySnap.exists()) {
-          invalidContacts.push({
-            id: docSnap.id,
-            name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
-            email: data.email || ""
-          });
-        }
-      }
-    }
-
-    sessionStorage.setItem("invalidContacts", JSON.stringify(invalidContacts));
-    alertBanner.style.display = invalidContacts.length > 0 ? "block" : "none";
-  } catch (err) {
-    console.error("Errore durante la verifica contatti orfani:", err.message);
-  }
-}
 
 const jsErrorBanner = document.getElementById("jsErrorBanner");
 initGlobalErrorHandling({ bannerEl: jsErrorBanner });
 
 window.addEventListener("beforeunload", () => {
+  sessionController.teardown();
+});
+
+window.addEventListener("beforeunload", () => {
   router.persistCurrentViewFromUI();
 });
 
+bindDashboardBackButtons();
+
+// Boot hidden states
+showLoginState();
+vehicleFormSection.style.display = "none";
+clientEditSection.style.display = "none";
+alertBanner.style.display = "none";
 
 export async function showDashboard(userInfo = null) {
-  hideAllSections();
-  // FORZA SEMPRE la visibilita e la pulizia DOM!
-  dashboardContainer.style.display = "block";
-  loginContainer.style.display = "none";
-  logoutBtn.style.display = "inline-block";
-  roleButtons.style.display = "flex";
-  roleButtons.innerHTML = "";
-
-  // Leggi ruolo e info utente dalla sessione o dal parametro passato
-  let userRole, userName, userEmail;
-  
-  if (userInfo) {
-    userRole = userInfo.role || "user";
-    userName = userInfo.name || "";
-    userEmail = userInfo.email || "";
-  } else {
-    // Fallback: leggi da localStorage
-    userRole = localStorage.getItem("userRole");
-    userName = localStorage.getItem("userName") || "";
-    userEmail = localStorage.getItem("userEmail") || "";
-    
-    // Se localStorage vuoto/incompleto ma utente autenticato, recupera da Firebase
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      // Recupera nome/email da auth se mancanti
-      if (!userName) {
-        userName = currentUser.displayName || currentUser.email || "";
-        localStorage.setItem("userName", userName);
-      }
-      if (!userEmail) {
-        userEmail = currentUser.email || "";
-        localStorage.setItem("userEmail", userEmail);
-      }
-      
-      // Se ruolo mancante o "user", ri-verifica da Firestore
-      if (!userRole || userRole === "user") {
-        try {
-          const userRef = doc(db, "allowedUsers", currentUser.email);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            userRole = userSnap.data().role || "user";
-            localStorage.setItem("userRole", userRole);
-          }
-        } catch (err) {
-          console.error("Errore recupero ruolo:", err.message);
-          userRole = userRole || "user";
-        }
-      }
-    }
-    
-    // Default finale se ancora vuoto
-    userRole = userRole || "user";
-  }
-
-  const welcomeName = userName || userEmail || "utente";
-  welcomeMsg.textContent = `Benvenuto ${welcomeName} (Ruolo: ${userRole})`;
-
-  // Bottoni dinamici (sincroni, no setTimeout)
-  if (userRole === "admin" || userRole === "staff") {
-    addRoleButton("Gestione appuntamenti", () => {
-      hideAllSections();
-      appointmentManageSection.style.display = "block";
-      import(`./forms/appointmentManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadAppointments());
-      router.setCurrentView("gestioneAppuntamenti");
-    });
-    addRoleButton("Nuovo appuntamento", () => {
-      hideAllSections();
-      appointmentFormSection.style.display = "block";
-      import("./forms/appointmentForm.js").then(m => m.resetAppointmentForm());
-      router.setCurrentView("nuovoAppuntamento");
-    });
-    addRoleButton("Gestione Veicoli", () => {
-      hideAllSections();
-      vehicleManageSection.style.display = "block";
-      import(`./forms/vehicleManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadVehicles());
-      router.setCurrentView("gestioneVeicoli");
-    });
-    if (userRole === "admin") {
-      addRoleButton("Gestione Clienti", () => {
-        hideAllSections();
-        clientManageSection.style.display = "block";
-        import(`./forms/clientManage.js?v=${RUNTIME_BUILD_TAG}`).then(m => m.loadClients());
-        router.setCurrentView("gestioneClienti");
-      });
-      if (IS_STAGING_RUNTIME) {
-        addRoleButton("Catalog Sync Admin", () => {
-          hideAllSections();
-          catalogSyncSection.style.display = "block";
-          import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
-          router.setCurrentView("catalogSyncAdmin");
-        });
-      }
-    }
-  }
-
-  if (document.getElementById("vehicleForm")) document.getElementById("vehicleForm").reset();
-  if (typeof hideSteps === "function") hideSteps();
+  await dashboardController.showDashboard(userInfo);
 }
-
-
-
