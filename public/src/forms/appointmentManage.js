@@ -12,6 +12,7 @@ import {
   updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { openModal } from "../utils/modal.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
 import {
   buildSortableHeaderRow,
@@ -24,6 +25,11 @@ import {
 const EDIT_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path d="m3 17.25 9.06-9.06 3.75 3.75L6.75 21H3v-3.75Zm14.71-9.04-1.92 1.92-3.75-3.75 1.92-1.92a1.5 1.5 0 0 1 2.12 0l1.63 1.63a1.5 1.5 0 0 1 0 2.12Z" fill="currentColor"/>
+  </svg>
+`;
+const VIEW_ICON = `
+  <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Zm10.5 4.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" fill="currentColor"/>
   </svg>
 `;
 const DELETE_ICON = `
@@ -227,28 +233,20 @@ export async function loadAppointments() {
         ),
       },
       {
-        key: "vehicle",
-        label: "Veicolo",
-        getValue: (d) => `${d.vehicleData?.brand || ""} ${d.vehicleData?.model || ""}`.trim(),
-      },
-      {
         key: "plate",
         label: "Targa",
         getValue: (d) => d.vehicleData?.licensePlate || "",
       },
       {
-        key: "operator",
-        label: "Operatore",
-        getValue: (d) => formatOperatore(d, operatorDisplayById),
-      },
-      {
         key: "status",
         label: "Stato",
+        className: "hide-mobile",
         getValue: (d) => d.status || "",
       },
       {
         key: "workDate",
         label: "Data lavorazione",
+        className: "hide-mobile",
         getValue: (d) => d.startWork || "",
       },
       {
@@ -284,38 +282,24 @@ export async function loadAppointments() {
       const cliente = d.customerData?.type === "company"
         ? d.customerData.companyName
         : `${d.customerData?.firstName || ""} ${d.customerData?.lastName || ""}`.trim();
-      const veicolo = d.vehicleData
-        ? `${d.vehicleData.brand || ""} ${d.vehicleData.model || ""}`.trim()
-        : "";
       const targa = d.vehicleData?.licensePlate || "";
-      const telaio = d.vehicleData?.chassisNumber || "N/D";
-      const jobType = d.jobTypeData?.description || "";
-      const operatore = formatOperatore(d, operatorDisplayById);
       const stato = d.status || "";
       const dataLavorazione = d.startWork ? formatDateTime(d.startWork) : "";
   
-      let actions = "";
-      if ((userRole === "admin") || (userRole === "staff" && d.createdBy === userEmail)) {
-        actions += `<button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="Modifica" aria-label="Modifica appuntamento">${EDIT_ICON}</button>`;
-      }
-      if (userRole === "admin") {
-        actions += `<button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}" title="Elimina" aria-label="Elimina appuntamento">${DELETE_ICON}</button>`;
-      }
+      const canEdit = (userRole === "admin") || (userRole === "staff" && d.createdBy === userEmail);
+      const canDelete = userRole === "admin";
+      const actions = `
+        <button class="btn btn--icon btn--view viewBtn" data-id="${d.id}" title="Visualizza" aria-label="Visualizza appuntamento">${VIEW_ICON}</button>
+        <button class="btn btn--icon btn--ghost editBtn" data-id="${d.id}" title="${canEdit ? "Modifica" : "Modifica non consentita"}" aria-label="Modifica appuntamento" ${canEdit ? "" : "disabled"}>${EDIT_ICON}</button>
+        <button class="btn btn--icon btn--danger deleteBtn" data-id="${d.id}" title="${canDelete ? "Elimina" : "Elimina non consentita"}" aria-label="Elimina appuntamento" ${canDelete ? "" : "disabled"}>${DELETE_ICON}</button>
+      `;
   
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${cliente}</td>
-        <td>
-          <div>${veicolo}</div>
-          <div class="appointment-inline-details">
-            <span><strong>Telaio:</strong> ${telaio}</span>
-            <span><strong>Lavoro:</strong> ${jobType || "N/D"}</span>
-          </div>
-        </td>
         <td>${targa}</td>
-        <td>${operatore}</td>
-        <td>${formatStatus(stato)}</td>
-        <td>${dataLavorazione}</td>
+        <td class="hide-mobile">${formatStatus(stato)}</td>
+        <td class="hide-mobile">${dataLavorazione}</td>
         <td class="actions-column">${actions}</td>
       `;
       tbody.appendChild(tr);
@@ -329,10 +313,16 @@ export async function loadAppointments() {
       const btn = e.target.closest("button");
       if (!btn) return;
       const id = btn.dataset.id;
+      if (btn.classList.contains("viewBtn")) {
+        const item = appointments.find((a) => a.id === id);
+        if (item) showReadOnlyAppointmentModal(item);
+      }
       if (btn.classList.contains("editBtn")) {
+        if (btn.disabled) return;
         showEditSection(id);
       }
       if (btn.classList.contains("deleteBtn")) {
+        if (btn.disabled) return;
         if (confirm("Sei sicuro di voler cancellare (soft delete) questo appuntamento?")) {
           await softDeleteAppointment(id);
           loadAppointments();
@@ -542,6 +532,29 @@ export async function loadAppointments() {
   function formatVeicolo(v) {
     if (!v) return "";
     return `${v.brand || ""} ${v.model || ""}`.trim();
+  }
+
+  function showReadOnlyAppointmentModal(data) {
+    const container = document.createElement("div");
+    container.className = "client-view-modal";
+    container.innerHTML = `
+      <div class="client-view-row"><strong>Cliente:</strong> ${formatCliente(data.customerData) || "N/D"}</div>
+      <div class="client-view-row"><strong>Veicolo:</strong> ${formatVeicolo(data.vehicleData) || "N/D"}</div>
+      <div class="client-view-row"><strong>Targa:</strong> ${data.vehicleData?.licensePlate || "N/D"}</div>
+      <div class="client-view-row"><strong>N. Telaio:</strong> ${data.vehicleData?.chassisNumber || "N/D"}</div>
+      <div class="client-view-row"><strong>Tipo lavoro:</strong> ${data.jobTypeData?.description || "N/D"}</div>
+      <div class="client-view-row"><strong>Operatore:</strong> ${formatOperatore(data, operatorDisplayById)}</div>
+      <div class="client-view-row"><strong>Stato:</strong> ${formatStatus(data.status || "N/D")}</div>
+      <div class="client-view-row"><strong>Ricezione:</strong> ${formatDateTime(data.startReception)} - ${formatDateTime(data.endReception)}</div>
+      <div class="client-view-row"><strong>Lavorazione:</strong> ${formatDateTime(data.startWork)} - ${formatDateTime(data.endWork)}</div>
+      <div class="client-view-row"><strong>Consegna:</strong> ${formatDateTime(data.startDelivery)} - ${formatDateTime(data.endDelivery)}</div>
+      <div class="client-view-row"><strong>Note:</strong> ${data.noteInternal || "-"}</div>
+    `;
+    openModal({
+      title: "Dettagli Appuntamento",
+      content: container,
+      noModalCancelBtn: false,
+    });
   }
 }
 
