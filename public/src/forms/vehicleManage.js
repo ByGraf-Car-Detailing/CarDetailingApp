@@ -13,6 +13,13 @@ import {
 import { showDashboard } from "../app.js";
 import { openModal, closeModal } from "../utils/modal.js";
 import { loadMakes, loadModels, loadYears } from "./vehicleForm.js";
+import {
+  buildSortableHeaderRow,
+  loadSortState,
+  resolveSortUserKey,
+  saveSortState,
+  sortRows,
+} from "../utils/tableSort.js";
 
 const vehiclesList = document.getElementById("vehiclesList");
 const searchBtn = document.getElementById("searchVehiclesBtn");
@@ -23,6 +30,10 @@ const addBtn = document.getElementById("showAddVehicleBtn");
 const backBtn = document.getElementById("backToDashboardVehiclesBtn");
 const vehicleManageSection = document.getElementById("vehicleManageSection");
 const resetBtn = document.getElementById("resetVehiclesBtn");
+const VEHICLES_TABLE_ID = "vehicles.manage";
+const DEFAULT_VEHICLES_SORT = { key: "owner", direction: "asc" };
+let vehiclesSortState = { ...DEFAULT_VEHICLES_SORT };
+let vehiclesSortUserKey = null;
 
 const EDIT_ICON = `
   <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -115,6 +126,19 @@ resetBtn.addEventListener("click", () => {
 });
 
 function renderList(docs) {
+  const currentUserKey = resolveSortUserKey({
+    authUser: auth.currentUser,
+    fallbackEmail: window.userEmail || "",
+  });
+  if (vehiclesSortUserKey !== currentUserKey) {
+    vehiclesSortUserKey = currentUserKey;
+    vehiclesSortState = loadSortState({
+      tableId: VEHICLES_TABLE_ID,
+      userKey: vehiclesSortUserKey,
+      defaultState: DEFAULT_VEHICLES_SORT,
+    });
+  }
+
   vehiclesList.innerHTML = "";
   if (docs.length === 0) {
     vehiclesList.textContent = "Nessun veicolo trovato.";
@@ -122,12 +146,39 @@ function renderList(docs) {
   }
 
   const table = document.createElement("table");
+  const columns = [
+    { key: "owner", label: "Proprietario", getValue: (v) => v.ownerLabel || "" },
+    { key: "brand", label: "Marca", getValue: (v) => v.brand || "" },
+    { key: "model", label: "Modello", getValue: (v) => v.model || "" },
+    { key: "year", label: "Anno", getValue: (v) => Number(v.year) || 0 },
+    { key: "plate", label: "Targa", getValue: (v) => v.licensePlate || "" },
+    { key: "chassis", label: "Nr. Telaio", getValue: (v) => v.chassisNumber || "" },
+    { key: null, label: "Azioni", className: "actions-column", sortable: false },
+  ];
   const thead = document.createElement("thead");
-  thead.innerHTML = `<tr><th>Proprietario</th><th>Marca</th><th>Modello</th><th>Anno</th><th>Targa</th><th>Nr. Telaio</th><th class="actions-column">Azioni</th></tr>`;
+  thead.appendChild(buildSortableHeaderRow({
+    columns,
+    state: vehiclesSortState,
+    onSortChange: (nextState) => {
+      vehiclesSortState = nextState;
+      saveSortState({
+        tableId: VEHICLES_TABLE_ID,
+        userKey: vehiclesSortUserKey,
+        state: vehiclesSortState,
+      });
+      renderList(docs);
+    },
+  }));
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
-  docs.forEach(v => {
+  const sortedDocs = sortRows(docs, {
+    state: vehiclesSortState,
+    columns,
+    tieBreaker: (v) => v.id || "",
+  });
+
+  sortedDocs.forEach(v => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${v.ownerLabel}</td>
