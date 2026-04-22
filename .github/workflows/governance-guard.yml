@@ -6,6 +6,10 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   coworking-proof:
     if: github.event_name == 'pull_request'
@@ -15,7 +19,17 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const body = context.payload.pull_request?.body || "";
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) {
+              core.setFailed("Missing pull request number in workflow context.");
+              return;
+            }
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const body = pr?.body || "";
             const required = [
               "codex_session_id:",
               "claude_session_id:",

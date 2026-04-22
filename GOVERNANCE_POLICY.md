@@ -20,3 +20,7 @@
 ## Identity and Co-Working
 - Primary operational identity: `ByGraf-Car-Detailing`.
 - Critical decisions require Codex+Claude trace according to manager governance.
+- PR body compliance is fail-closed:
+  - generate body with `scripts/gen-pr-body.ps1`
+  - create PR with `gh pr create --body-file ...`
+  - placeholder or missing mandatory trace fields are blocked by `coworking-proof`.
