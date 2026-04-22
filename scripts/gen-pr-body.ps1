@@ -14,10 +14,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function New-CsSessionId {
-  return "CS-{0}" -f (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
-}
-
 function Test-NotPlaceholder {
   param([string]$Value)
   return ($Value -and $Value.Trim().Length -gt 0 -and $Value -notmatch '^(N/A|TBD|placeholder|none|unknown)$')
@@ -25,14 +21,19 @@ function Test-NotPlaceholder {
 
 function Test-SessionIdFormat {
   param([string]$Value)
-  return ($Value -match '^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|CS-\d{8}-\d{6})$')
+  return ($Value -match '^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$')
 }
 
-if (-not $CodexSessionId) { $CodexSessionId = New-CsSessionId }
-if (-not $ClaudeSessionId) { $ClaudeSessionId = New-CsSessionId }
-if ($CodexSessionId -eq $ClaudeSessionId) {
-  Start-Sleep -Seconds 1
-  $ClaudeSessionId = New-CsSessionId
+if (-not $CodexSessionId -or -not $ClaudeSessionId) {
+  if (-not $env:CODEX_THREAD_ID) {
+    throw "SESSION_ID_SOURCE_MISSING: CODEX_THREAD_ID is required when session ids are not explicitly provided."
+  }
+  $CodexSessionId = $env:CODEX_THREAD_ID
+  $ClaudeSessionId = $env:CODEX_THREAD_ID
+}
+
+if ($CodexSessionId -ne $ClaudeSessionId) {
+  throw "SESSION_BINDING_MISMATCH: codex_session_id must equal claude_session_id."
 }
 
 if ($TimeoutMs -lt 600000) {
@@ -54,10 +55,10 @@ foreach ($entry in $requiredValues.GetEnumerator()) {
 }
 
 if (-not (Test-SessionIdFormat -Value $CodexSessionId)) {
-  throw "codex_session_id is invalid. Use UUID or CS-YYYYMMDD-HHMMSS."
+  throw "codex_session_id is invalid. Must be UUID."
 }
 if (-not (Test-SessionIdFormat -Value $ClaudeSessionId)) {
-  throw "claude_session_id is invalid. Use UUID or CS-YYYYMMDD-HHMMSS."
+  throw "claude_session_id is invalid. Must be UUID."
 }
 
 $body = @"
@@ -67,6 +68,7 @@ $body = @"
 ## Coworking Trace (Mandatory)
 - codex_session_id: $CodexSessionId
 - claude_session_id: $ClaudeSessionId
+- binding_source: CODEX_THREAD_ID
 - timeout_ms: $TimeoutMs
 - question: $Question
 - options_considered: $OptionsConsidered

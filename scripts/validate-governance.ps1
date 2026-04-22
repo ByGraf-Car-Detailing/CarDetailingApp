@@ -36,6 +36,8 @@ Write-Host "PASS   [AGENTS no hardcoded session id]"
 Assert-Contains -Path "AGENTS.md" -Pattern "CLAUDE_TIMEOUT_MIN_10M" -Label "AGENTS timeout policy"
 Assert-Contains -Path "AGENTS.md" -Pattern "PROD_SAFE_FINAL_CONTROL" -Label "AGENTS prod-safe control"
 Assert-Contains -Path "AGENTS.md" -Pattern "options_considered" -Label "AGENTS trace field alignment"
+Assert-Contains -Path "AGENTS.md" -Pattern "codex_session_id == claude_session_id == CODEX_THREAD_ID" -Label "AGENTS same-id binding"
+Assert-Contains -Path "AGENTS.md" -Pattern "SESSION_ID_SOURCE_MISSING" -Label "AGENTS hard-stop source missing"
 
 Assert-Contains -Path ".github/workflows/ci.yml" -Pattern "quality" -Label "CI quality job"
 Assert-Contains -Path ".github/workflows/governance-guard.yml" -Pattern "validate-governance" -Label "Governance guard workflow"
@@ -45,6 +47,7 @@ Assert-Contains -Path "GOVERNANCE_POLICY.md" -Pattern "gen-pr-body.ps1" -Label "
 Assert-Contains -Path "AGENTS.md" -Pattern "gen-pr-body.ps1" -Label "AGENTS PR body generator policy"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "codex_session_id:" -Label "PR template codex session field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "claude_session_id:" -Label "PR template claude session field"
+Assert-Contains -Path ".github/pull_request_template.md" -Pattern "binding_source: CODEX_THREAD_ID" -Label "PR template binding source field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "timeout_ms:" -Label "PR template timeout field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "options_considered:" -Label "PR template options considered field"
 if (-not (Test-Path "scripts/gen-pr-body.ps1")) {
@@ -52,6 +55,11 @@ if (-not (Test-Path "scripts/gen-pr-body.ps1")) {
   exit 1
 }
 Write-Host "PASS   [PR body generator]"
+if (-not (Test-Path "scripts/validate-coworking-trace.mjs")) {
+  Write-Error "FAILED [coworking trace validator] -> scripts/validate-coworking-trace.mjs is missing"
+  exit 1
+}
+Write-Host "PASS   [coworking trace validator]"
 
 # Secrets tracked check (.env* tracked files are forbidden)
 $trackedEnv = git ls-files | Where-Object { $_ -match '(^|/)\.env' }
