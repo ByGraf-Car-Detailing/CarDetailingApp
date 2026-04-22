@@ -21,6 +21,9 @@ Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
   - `codex_session_id`
   - `claude_session_id`
   - `started_at_utc`
+- Binding source of truth is runtime `CODEX_THREAD_ID` (UUID).
+- Mandatory equality contract: `codex_session_id == claude_session_id == CODEX_THREAD_ID`.
+- If `CODEX_THREAD_ID` is unavailable, coworking and PR creation are blocked (`SESSION_ID_SOURCE_MISSING`).
 - The bound `claude_session_id` must remain unchanged for the full Codex session lifecycle.
 - Hardcoded session IDs in governance or runbook documents are forbidden.
 - Any session binding change requires explicit Owner approval and same-turn decision log trace.
@@ -29,6 +32,7 @@ Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
 - Required fields:
   - `codex_session_id`
   - `claude_session_id`
+  - `binding_source`
   - `timeout_ms`
   - `question`
   - `options_considered`
@@ -40,7 +44,8 @@ Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
 - PR creation must use `scripts/gen-pr-body.ps1` followed by `gh pr create --body-file`.
 - Manual PR body authoring is not accepted for governance closure.
 - Preflight before `gh pr create`:
-  - `codex_session_id` and `claude_session_id` are valid (UUID or `CS-YYYYMMDD-HHMMSS`).
+  - `codex_session_id` and `claude_session_id` are valid UUID values and equal.
+  - `binding_source` must be `CODEX_THREAD_ID`.
   - `timeout_ms >= 600000`.
   - `question`, `options_considered`, `recommendation`, `residual_risk` are non-empty and non-placeholder.
 - `coworking-proof` failure due to body non-compliance blocks merge (no exception path).

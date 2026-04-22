@@ -23,4 +23,6 @@
 - PR body compliance is fail-closed:
   - generate body with `scripts/gen-pr-body.ps1`
   - create PR with `gh pr create --body-file ...`
+  - `codex_session_id == claude_session_id == CODEX_THREAD_ID`
+  - `binding_source: CODEX_THREAD_ID` mandatory in PR body
   - placeholder or missing mandatory trace fields are blocked by `coworking-proof`.
