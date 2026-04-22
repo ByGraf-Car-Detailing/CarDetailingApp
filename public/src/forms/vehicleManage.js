@@ -88,6 +88,8 @@ export async function loadVehicles() {
         const c = s.data();
         ownerLabel = c.type === "company" ? c.companyName : `${c.firstName || ""} ${c.lastName || ""}`.trim();
         data.ownerType = c.type || "person";
+        data.ownerFirstName = c.firstName || "";
+        data.ownerLastName = c.lastName || "";
       }
     }
     all.push({ id: d.id, ...data, ownerLabel });
@@ -115,6 +117,8 @@ searchBtn.addEventListener("click", async () => {
         const c = s.data();
         ownerLabel = c.type === "company" ? c.companyName : `${c.firstName || ""} ${c.lastName || ""}`.trim();
         data.ownerType = c.type || "person";
+        data.ownerFirstName = c.firstName || "";
+        data.ownerLastName = c.lastName || "";
       }
     }
     if ((plate && !data.licensePlate?.toLowerCase().includes(plate)) ||
@@ -187,7 +191,7 @@ function renderList(docs) {
   });
 
   sortedDocs.forEach(v => {
-    const ownerCell = formatOwnerCell(v.ownerLabel, v.ownerType);
+    const ownerCell = formatOwnerCell(v);
     const vehicleMobileCard = formatVehicleMobileCard(v);
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -227,14 +231,15 @@ function renderList(docs) {
   });
 }
 
-function formatOwnerCell(ownerLabel, ownerType) {
+function formatOwnerCell(vehicle) {
+  const ownerLabel = vehicle.ownerLabel || "";
+  const ownerType = vehicle.ownerType;
   if (!ownerLabel) return "N/D";
   if (ownerType !== "person") {
     return `<span class="company-name-cell">${ownerLabel}</span>`;
   }
-  const parts = ownerLabel.trim().split(/\s+/);
-  const firstName = parts.shift() || "";
-  const lastName = parts.join(" ") || "";
+  const firstName = (vehicle.ownerFirstName || "").trim();
+  const lastName = (vehicle.ownerLastName || "").trim();
   if (!firstName && !lastName) return "N/D";
   if (!lastName) return firstName;
   return `<span class="person-name-stack"><span>${firstName}</span><span>${lastName}</span></span>`;

@@ -1094,6 +1094,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     vertical-align: top;
   }
 
+  #vehiclesList th.show-mobile {
+    white-space: nowrap;
+    min-width: 128px;
+  }
+
+  #vehiclesList td.actions-column {
+    width: 64px;
+    white-space: normal;
+  }
+
+  #vehiclesList td.actions-column .btn {
+    display: block;
+    margin: 0 0 6px 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  #vehiclesList td.actions-column .btn:last-child {
+    margin-bottom: 0;
+  }
+
   .actions-column .btn {
     margin-top: 6px;
   }
