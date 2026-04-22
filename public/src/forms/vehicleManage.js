@@ -158,8 +158,8 @@ function renderList(docs) {
 
   const table = document.createElement("table");
   const columns = [
-    { key: "owner", label: "Proprietario", className: "cell-mobile-wrap", getValue: (v) => v.ownerLabel || "" },
-    { key: "vehicleMobile", label: "Veicolo", className: "show-mobile cell-mobile-wrap", sortable: false, getValue: (v) => `${v.brand || ""} ${v.model || ""}`.trim() },
+    { key: "owner", label: "Proprietario", className: "cell-mobile-wrap owner-mobile-col", getValue: (v) => v.ownerLabel || "" },
+    { key: "vehicleMobile", label: "Veicolo", className: "show-mobile cell-mobile-wrap vehicle-mobile-col", sortable: false, getValue: (v) => `${v.brand || ""} ${v.model || ""}`.trim() },
     { key: "brand", label: "Marca", className: "hide-mobile", getValue: (v) => v.brand || "" },
     { key: "model", label: "Modello", className: "hide-mobile", getValue: (v) => v.model || "" },
     { key: "year", label: "Anno", className: "hide-mobile", getValue: (v) => Number(v.year) || 0 },
@@ -195,8 +195,8 @@ function renderList(docs) {
     const vehicleMobileCard = formatVehicleMobileCard(v);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="cell-mobile-wrap">${ownerCell}</td>
-      <td class="show-mobile cell-mobile-wrap">${vehicleMobileCard}</td>
+      <td class="cell-mobile-wrap owner-mobile-col">${ownerCell}</td>
+      <td class="show-mobile cell-mobile-wrap vehicle-mobile-col">${vehicleMobileCard}</td>
       <td class="hide-mobile">${v.brand}</td>
       <td class="hide-mobile">${v.model}</td>
       <td class="hide-mobile">${v.year || ""}</td>
