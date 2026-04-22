@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { loginViaEmu } from "./helpers/auth";
 
-test.describe.configure({ timeout: 60_000 });
+// i profili mobile/WebKit in CI possono essere sensibilmente più lenti
+// durante bootstrap auth+emulator; evitiamo timeout falsi positivi.
+test.describe.configure({ timeout: 120_000 });
 
 async function settleAfterReload(page) {
   const readState = async () =>
