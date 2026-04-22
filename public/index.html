@@ -345,45 +345,53 @@
       <button id="showAppointmentFormFromListBtn" class="btn btn--primary">Nuovo appuntamento</button>
     </div>
     
-    <fieldset>
+    <fieldset class="appointment-filters-fieldset">
       <legend>Filtri appuntamenti</legend>
-      
-      <label for="filterCustomer">Cliente:</label>
-      <input type="text" id="filterCustomer" />
-      
-      <label for="filterPlate">Targa:</label>
-      <input type="text" id="filterPlate" />
-      
-      <label for="filterChassis">N. TELAIO:</label>
-      <input type="text" id="filterChassis" />
-      
-      <label for="filterJobType">Tipo lavoro:</label>
-      <select id="filterJobType">
-        <option value="">Tutti</option>
-      </select>
-      
-      <label for="filterOperator">Operatore:</label>
-      <select id="filterOperator">
-        <option value="">Tutti</option>
-      </select>
-      
-      <label for="filterStatus">Stato:</label>
-      <select id="filterStatus">
-        <option value="">Tutti</option>
-        <option value="programmato">Programmato</option>
-        <option value="ricezione">Ricezione</option>
-        <option value="attesa">Attesa</option>
-        <option value="lavorazione">Lavorazione</option>
-        <option value="pronto">Pronto</option>
-        <option value="in consegna">In consegna</option>
-        <option value="concluso">Concluso</option>
-        <option value="fatturato">Fatturato</option>
-        <option value="pagato">Pagato</option>
-      </select>
-      
-      <label for="filterDate">Data lavorazione:</label>
-      <input type="date" id="filterDate" />
-      
+      <div class="appointment-filters-grid">
+        <div class="filter-field">
+          <label for="filterCustomer">Cliente:</label>
+          <input type="text" id="filterCustomer" />
+        </div>
+        <div class="filter-field">
+          <label for="filterPlate">Targa:</label>
+          <input type="text" id="filterPlate" />
+        </div>
+        <div class="filter-field">
+          <label for="filterChassis">N. TELAIO:</label>
+          <input type="text" id="filterChassis" />
+        </div>
+        <div class="filter-field">
+          <label for="filterJobType">Tipo lavoro:</label>
+          <select id="filterJobType">
+            <option value="">Tutti</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterOperator">Operatore:</label>
+          <select id="filterOperator">
+            <option value="">Tutti</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterStatus">Stato:</label>
+          <select id="filterStatus">
+            <option value="">Tutti</option>
+            <option value="programmato">Programmato</option>
+            <option value="ricezione">Ricezione</option>
+            <option value="attesa">Attesa</option>
+            <option value="lavorazione">Lavorazione</option>
+            <option value="pronto">Pronto</option>
+            <option value="in consegna">In consegna</option>
+            <option value="concluso">Concluso</option>
+            <option value="fatturato">Fatturato</option>
+            <option value="pagato">Pagato</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filterDate">Data lavorazione:</label>
+          <input type="date" id="filterDate" />
+        </div>
+      </div>
       <div class="form-actions">
         <button type="button" id="resetAppointmentsBtn" class="btn btn--ghost">Azzera Filtri</button>
         <button type="button" id="searchAppointmentsBtn" class="btn btn--primary">Cerca</button>

@@ -530,18 +530,13 @@ export async function loadAppointments() {
   function formatCustomerCell(c) {
     if (!c) return "N/D";
     if (c.type === "company") {
-      return `<span class="desktop-inline-name">${c.companyName || "N/D"}</span>`;
+      return `<span class="company-name-cell">${c.companyName || "N/D"}</span>`;
     }
     const firstName = c.firstName || "";
     const lastName = c.lastName || "";
-    const fullName = `${firstName} ${lastName}`.trim() || "N/D";
-    return `
-      <span class="desktop-inline-name">${fullName}</span>
-      <span class="mobile-person-stack">
-        <span>${firstName || "-"}</span>
-        <span>${lastName || "-"}</span>
-      </span>
-    `;
+    if (!firstName && !lastName) return "N/D";
+    if (!lastName) return firstName;
+    return `<span class="person-name-stack"><span>${firstName}</span><span>${lastName}</span></span>`;
   }
   
   function formatVeicolo(v) {

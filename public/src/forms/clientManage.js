@@ -261,17 +261,13 @@ function renderList(docs) {
 
 function formatClientNameCell(client, fullName) {
   if (client.type !== "person") {
-    return `<span class="desktop-inline-name">${fullName || "N/D"}</span>`;
+    return `<span class="company-name-cell">${fullName || "N/D"}</span>`;
   }
   const firstName = client.firstName || "";
   const lastName = client.lastName || "";
-  return `
-    <span class="desktop-inline-name">${fullName || "N/D"}</span>
-    <span class="mobile-person-stack">
-      <span>${firstName || "-"}</span>
-      <span>${lastName || "-"}</span>
-    </span>
-  `;
+  if (!firstName && !lastName) return "N/D";
+  if (!lastName) return firstName;
+  return `<span class="person-name-stack"><span>${firstName}</span><span>${lastName}</span></span>`;
 }
 
 // Modal visualizzazione cliente (solo lettura)

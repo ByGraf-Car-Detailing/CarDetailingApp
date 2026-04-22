@@ -230,28 +230,24 @@ function renderList(docs) {
 function formatOwnerCell(ownerLabel, ownerType) {
   if (!ownerLabel) return "N/D";
   if (ownerType !== "person") {
-    return `<span class="desktop-inline-name">${ownerLabel}</span>`;
+    return `<span class="company-name-cell">${ownerLabel}</span>`;
   }
   const parts = ownerLabel.trim().split(/\s+/);
   const firstName = parts.shift() || "";
   const lastName = parts.join(" ") || "";
-  return `
-    <span class="desktop-inline-name">${ownerLabel}</span>
-    <span class="mobile-person-stack">
-      <span>${firstName || "-"}</span>
-      <span>${lastName || "-"}</span>
-    </span>
-  `;
+  if (!firstName && !lastName) return "N/D";
+  if (!lastName) return firstName;
+  return `<span class="person-name-stack"><span>${firstName}</span><span>${lastName}</span></span>`;
 }
 
 function formatVehicleMobileCard(vehicle) {
   return `
-    <div class="vehicle-mobile-card">
-      <div>${vehicle.brand || "-"}</div>
-      <div>${vehicle.model || "-"}</div>
-      <div>${vehicle.year || "-"}</div>
-      <div>${vehicle.licensePlate || "-"}</div>
-    </div>
+    <span class="vehicle-mobile-card">
+      <span>${vehicle.brand || "-"}</span>
+      <span>${vehicle.model || "-"}</span>
+      <span>${vehicle.year || "-"}</span>
+      <span>${vehicle.licensePlate || "-"}</span>
+    </span>
   `;
 }
 

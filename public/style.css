@@ -489,17 +489,42 @@ td {
   white-space: nowrap;
 }
 
-.desktop-inline-name {
-  display: inline;
+.person-name-stack {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
 }
 
-.mobile-person-stack {
-  display: none;
+.company-name-cell {
+  display: inline;
+  white-space: nowrap;
 }
 
 .vehicle-mobile-card {
   display: grid;
   gap: 2px;
+  line-height: 1.25;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+}
+
+.vehicle-mobile-card > span {
+  display: block;
+}
+
+.appointment-filters-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.filter-field {
+  min-width: 0;
+}
+
+.filter-field label {
+  display: block;
 }
 
 .appointment-inline-details {
@@ -1058,13 +1083,15 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     word-break: break-word;
   }
 
-  .desktop-inline-name {
-    display: none !important;
-  }
-
-  .mobile-person-stack {
+  .person-name-stack {
     display: grid;
     gap: 2px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  #vehiclesList td {
+    vertical-align: top;
   }
 
   .actions-column .btn {
@@ -1094,15 +1121,38 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   td.show-mobile {
     display: table-cell !important;
   }
+
+  .appointment-filters-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (min-width: 768px) {
+  .appointment-filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .appointment-filters-fieldset .form-actions {
+    margin-top: 12px;
+  }
+
+  .appointment-filters-fieldset .filter-field:last-child {
+    grid-column: span 1;
+  }
+
   .show-mobile {
     display: none !important;
   }
   
   .show-desktop {
     display: inline !important;
+  }
+
+  .person-name-stack {
+    display: inline-flex;
+    gap: 4px;
+    white-space: nowrap;
   }
 }
 
