@@ -149,6 +149,7 @@ export async function loadAppointments() {
       filterDate.value = "";
       filterCustomer.value = "";
       filterPlate.value = "";
+      document.getElementById("filterChassis").value = "";
       filterOperator.value = "";
       filterJobType.value = "";
       loadAppointments();
