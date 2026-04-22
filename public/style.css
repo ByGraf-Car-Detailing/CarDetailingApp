@@ -1096,19 +1096,29 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
   #vehiclesList th.show-mobile {
     white-space: nowrap;
-    min-width: 128px;
+  }
+
+  #vehiclesList th.owner-mobile-col,
+  #vehiclesList td.owner-mobile-col {
+    min-width: 94px;
+  }
+
+  #vehiclesList th.vehicle-mobile-col,
+  #vehiclesList td.vehicle-mobile-col {
+    min-width: 142px;
   }
 
   #vehiclesList td.actions-column {
-    width: 64px;
+    width: 52px;
+    min-width: 52px;
     white-space: normal;
   }
 
   #vehiclesList td.actions-column .btn {
     display: block;
     margin: 0 0 6px 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     padding: 0;
   }
 
