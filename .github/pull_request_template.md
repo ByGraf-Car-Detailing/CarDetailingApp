@@ -3,13 +3,13 @@
 - staging impact:
 
 ## Coworking Trace (Mandatory)
-- codex_session_id:
-- claude_session_id:
-- timeout_ms:
-- question:
-- options_considered:
-- recommendation:
-- residual_risk:
+- codex_session_id: <!-- UUID or CS-YYYYMMDD-HHMMSS -->
+- claude_session_id: <!-- UUID or CS-YYYYMMDD-HHMMSS -->
+- timeout_ms: <!-- must be >= 600000 -->
+- question: <!-- one precise question -->
+- options_considered: <!-- 2-3 options, no placeholders -->
+- recommendation: <!-- chosen option -->
+- residual_risk: <!-- concrete residual risk -->
 
 ## Validation
 - quality:

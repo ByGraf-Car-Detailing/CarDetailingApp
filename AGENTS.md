@@ -36,6 +36,15 @@ Scope: `C:\CarDetailingApp_LOCAL\CarDetailingApp_LOCAL`
   - `residual_risk`
 - Placeholder values are forbidden (`TBD`, `N/A`, `none`, `unknown`, `placeholder`).
 
+## PR Body Compliance (Mandatory, Non-Bypassable)
+- PR creation must use `scripts/gen-pr-body.ps1` followed by `gh pr create --body-file`.
+- Manual PR body authoring is not accepted for governance closure.
+- Preflight before `gh pr create`:
+  - `codex_session_id` and `claude_session_id` are valid (UUID or `CS-YYYYMMDD-HHMMSS`).
+  - `timeout_ms >= 600000`.
+  - `question`, `options_considered`, `recommendation`, `residual_risk` are non-empty and non-placeholder.
+- `coworking-proof` failure due to body non-compliance blocks merge (no exception path).
+
 ## Release Contract
 - No direct push to `main`; only PR + squash.
 - Required checks on `main`: `quality` and `validate-governance`.

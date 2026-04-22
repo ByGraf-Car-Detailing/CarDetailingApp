@@ -39,11 +39,19 @@ Assert-Contains -Path "AGENTS.md" -Pattern "options_considered" -Label "AGENTS t
 
 Assert-Contains -Path ".github/workflows/ci.yml" -Pattern "quality" -Label "CI quality job"
 Assert-Contains -Path ".github/workflows/governance-guard.yml" -Pattern "validate-governance" -Label "Governance guard workflow"
+Assert-Contains -Path ".github/workflows/governance-guard.yml" -Pattern "github.rest.pulls.get" -Label "Governance guard live PR body fetch"
 Assert-Contains -Path "GOVERNANCE_POLICY.md" -Pattern "validate-governance" -Label "Policy references governance guard"
+Assert-Contains -Path "GOVERNANCE_POLICY.md" -Pattern "gen-pr-body.ps1" -Label "Policy references PR body generator"
+Assert-Contains -Path "AGENTS.md" -Pattern "gen-pr-body.ps1" -Label "AGENTS PR body generator policy"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "codex_session_id:" -Label "PR template codex session field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "claude_session_id:" -Label "PR template claude session field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "timeout_ms:" -Label "PR template timeout field"
 Assert-Contains -Path ".github/pull_request_template.md" -Pattern "options_considered:" -Label "PR template options considered field"
+if (-not (Test-Path "scripts/gen-pr-body.ps1")) {
+  Write-Error "FAILED [PR body generator] -> scripts/gen-pr-body.ps1 is missing"
+  exit 1
+}
+Write-Host "PASS   [PR body generator]"
 
 # Secrets tracked check (.env* tracked files are forbidden)
 $trackedEnv = git ls-files | Where-Object { $_ -match '(^|/)\.env' }
