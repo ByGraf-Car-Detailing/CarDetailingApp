@@ -9,7 +9,7 @@ import { createViewEffects } from "./viewEffects.js";
 import { createDataIntegrityChecks } from "./dataIntegrityChecks.js";
 import { applyUITextRepair } from "./utils/uiTextRepair.js";
 
-const RUNTIME_BUILD_TAG = "20260423-staging-text-repair-1";
+const RUNTIME_BUILD_TAG = "20260423-staging-runtimeconfig-fix-1";
 
 const loginContainer = document.getElementById("loginContainer");
 const dashboardContainer = document.getElementById("dashboardContainer");

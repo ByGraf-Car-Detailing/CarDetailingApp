@@ -14,7 +14,8 @@ async function loginAdmin(page) {
 }
 
 async function openCatalogSyncAdmin(page) {
-  await page.getByTestId("dash-catalog-sync-admin").click();
+  await page.getByTestId("dash-amministrazione").click();
+  await page.getByTestId("dash-catalogo-marche").click();
   await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
   await expect(page.locator("#catalogSyncTarget")).toBeVisible({ timeout: 15000 });
   await expect(page.locator("#catalogSyncConfirmation")).toBeVisible({ timeout: 15000 });

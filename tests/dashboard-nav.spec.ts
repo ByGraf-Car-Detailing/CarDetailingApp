@@ -34,7 +34,6 @@ test("admin: dashboard buttons -> correct sections", async ({ page }) => {
     { btn: "dash-nuovo-appuntamento",   section: "#appointmentFormSection",   back: "#backToDashboardAppointmentBtn" },
     { btn: "dash-gestione-veicoli",     section: "#vehicleManageSection",     back: "#backToDashboardVehiclesBtn" },
     { btn: "dash-gestione-clienti",     section: "#clientManageSection",      back: "#backToDashboardClientsBtn" },
-    { btn: "dash-catalog-sync-admin",   section: "#catalogSyncSection",       back: "#backToDashboardCatalogSyncBtn" },
   ];
 
   for (const c of cases) {
@@ -43,6 +42,12 @@ test("admin: dashboard buttons -> correct sections", async ({ page }) => {
     await page.locator(c.back).click();
     await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
   }
+
+  await page.getByTestId("dash-amministrazione").click();
+  await page.getByTestId("dash-catalogo-marche").click();
+  await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
+  await page.locator("#backToDashboardCatalogSyncBtn").click();
+  await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
 });
 
 test("admin: restore currentView catalog sync then back returns to dashboard", async ({ page }) => {
@@ -57,7 +62,8 @@ test("admin: restore currentView catalog sync then back returns to dashboard", a
   expect(user).toBeTruthy();
   await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
 
-  await page.getByTestId("dash-catalog-sync-admin").click();
+  await page.getByTestId("dash-amministrazione").click();
+  await page.getByTestId("dash-catalogo-marche").click();
   await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
 
   await page.reload();
