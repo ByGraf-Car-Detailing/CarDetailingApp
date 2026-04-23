@@ -4,6 +4,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { resolveOperatorAuditName } from "./operatorIdentity.js";
 
 const RUNTIME_COLLECTION = "runtimeConfig";
 const APPOINTMENT_LOCATIONS_DOC = "appointmentLocations";
@@ -94,6 +95,7 @@ export async function saveAppointmentLocations({
   db,
   locations,
   actorEmail = "unknown",
+  actorName = "",
   previousVersion = 0,
   enabled = true,
 } = {}) {
@@ -109,6 +111,7 @@ export async function saveAppointmentLocations({
     version,
     updatedAt: serverTimestamp(),
     updatedBy: actorEmail || "unknown",
+    updatedByName: resolveOperatorAuditName({ updatedByName: actorName }),
   };
   await setDoc(doc(db, RUNTIME_COLLECTION, APPOINTMENT_LOCATIONS_DOC), payload, { merge: true });
   appointmentLocationsCache = [...sanitized];

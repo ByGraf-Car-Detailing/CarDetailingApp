@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
 const appPath = path.join(root, "public", "src", "app.js");
@@ -115,5 +116,10 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
+
+execFileSync("node", ["scripts/check-admin-operator-privacy.mjs"], { stdio: "inherit" });
+execFileSync("node", ["--experimental-vm-modules", "scripts/test-operator-audit-helper.mjs"], {
+  stdio: "inherit",
+});
 
 console.log("lint:quality passed");
