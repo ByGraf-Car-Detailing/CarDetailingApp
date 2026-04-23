@@ -39,12 +39,16 @@ Assert-Contains -Path "public/src/services/firebaseRuntime.js" -Pattern '"measur
 
 # 3) Staging-only boundary guard must be present in runtime.
 Assert-Contains -Path "public/src/app.js" -Pattern "IS_STAGING_RUNTIME" -Label "runtime staging boundary flag"
-Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Catalog Sync Admin""" -Label "catalog button declaration"
+Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Amministrazione""" -Label "admin menu declaration"
+Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Catalogo Marche""" -Label "catalog button declaration"
+Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Gestione Sedi""" -Label "runtime config button declaration"
 Assert-Contains -Path "public/src/dashboardController.js" -Pattern "if (isStagingRuntime)" -Label "catalog button staging-only guard"
 Assert-Contains -Path "public/src/viewEffects.js" -Pattern "if (!isStagingRuntime)" -Label "restore-view prod fallback guard"
 
 # 4) Production hard guard in html entrypoint must exist.
 Assert-Contains -Path "public/index.html" -Pattern "isProdHost" -Label "index prod host gate"
-Assert-Contains -Path "public/index.html" -Pattern "label === ""catalog sync admin""" -Label "index removes staging-only entry in prod"
+Assert-Contains -Path "public/index.html" -Pattern "amministrazione" -Label "index removes admin menu in prod"
+Assert-Contains -Path "public/index.html" -Pattern "catalogo marche" -Label "index removes catalog menu in prod"
+Assert-Contains -Path "public/index.html" -Pattern "gestione sedi" -Label "index removes runtime config menu in prod"
 
 Write-Host "All runtime parity/boundary checks passed."

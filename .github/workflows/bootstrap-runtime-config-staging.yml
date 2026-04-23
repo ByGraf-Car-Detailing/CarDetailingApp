@@ -1,0 +1,70 @@
+name: Bootstrap Runtime Config Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type exactly: bootstrap-runtime-config=staging"
+        required: true
+      appointment_locations_csv:
+        description: "Optional CSV locations override (example: Lugano Centro,Lugano Stampa)"
+        required: false
+        default: ""
+
+jobs:
+  bootstrap-runtime-config-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate confirmation
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "bootstrap-runtime-config=staging" ]; then
+            echo "Invalid confirmation value. Expected exactly: bootstrap-runtime-config=staging"
+            exit 1
+          fi
+
+      - name: Materialize staging service account
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}' > "$RUNNER_TEMP/firebase-sa-staging.json"
+          if [ ! -s "$RUNNER_TEMP/firebase-sa-staging.json" ]; then
+            echo "Missing or empty secret FIREBASE_SERVICE_ACCOUNT_STAGING"
+            exit 1
+          fi
+          STAGING_PROJECT_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/firebase-sa-staging.json','utf8'));process.stdout.write(j.project_id||'')")
+          if [ "$STAGING_PROJECT_ID" != "cardetailingapp-e6c95-staging" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT_STAGING project_id mismatch: got '$STAGING_PROJECT_ID', expected 'cardetailingapp-e6c95-staging'"
+            exit 1
+          fi
+          echo "STAGING_SA_PATH=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa-staging.json" >> "$GITHUB_ENV"
+
+      - name: Deploy Firestore rules and indexes (staging)
+        run: npx firebase deploy --project staging --only firestore:rules,firestore:indexes
+
+      - name: Bootstrap runtime config (staging)
+        env:
+          RUNTIME_CONFIG_CONFIRMATION: ${{ github.event.inputs.confirmation }}
+          RUNTIME_CONFIG_APPOINTMENT_LOCATIONS: ${{ github.event.inputs.appointment_locations_csv }}
+        run: node scripts/bootstrap-runtime-config-staging.mjs
+
+      - name: Upload runtime config bootstrap artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-config-bootstrap-${{ github.run_id }}
+          path: artifacts/runtime-config-bootstrap/summary.json
+          if-no-files-found: error

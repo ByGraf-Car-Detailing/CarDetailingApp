@@ -272,7 +272,14 @@ export async function initRuntimeConfigUI() {
       const meta = await readRuntimeMeta();
       currentVersion = Number.isInteger(meta?.version) ? meta.version : 0;
       renderMeta(meta);
-      clearMessage();
+      if (!meta) {
+        showMessage(
+          "error",
+          "Configurazione runtime non inizializzata: in uso sedi fallback finche non viene salvata la prima configurazione."
+        );
+      } else {
+        clearMessage();
+      }
     } catch (metaError) {
       currentVersion = 0;
       renderMeta(null);

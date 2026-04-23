@@ -473,10 +473,17 @@
         if (!isProdHost) return;
         const roleButtons = document.getElementById("roleButtons");
         if (!roleButtons) return;
+        const blockedLabels = new Set([
+          "amministrazione",
+          "catalogo marche",
+          "gestione sedi",
+          "catalog sync admin",
+          "runtime config admin"
+        ]);
         const candidates = roleButtons.querySelectorAll("button, a");
         for (const el of candidates) {
           const label = (el.textContent || "").trim().toLowerCase();
-          if (label === "catalog sync admin") {
+          if (blockedLabels.has(label)) {
             el.remove();
           }
         }
