@@ -16,6 +16,10 @@ import {
   normalizeVehicleType,
   runCatalogSync,
 } from "./catalogSyncRunner.js";
+import {
+  buildOperatorAuditActor,
+  resolveSessionOperatorName,
+} from "../services/operatorIdentity.js";
 
 const TARGET_BY_PROJECT = {
   "cardetailingapp-e6c95-staging": "staging",
@@ -58,6 +62,15 @@ function resolveMode(button) {
   if (button.id === "syncMakesBtn") return "makes";
   if (button.id === "syncModelsBtn") return "models";
   return "reference";
+}
+
+function getAuditActor() {
+  return buildOperatorAuditActor({
+    email: auth.currentUser?.email || "",
+    operatorId: auth.currentUser?.uid || "",
+    sessionDisplayName: resolveSessionOperatorName(),
+    authDisplayName: auth.currentUser?.displayName || "",
+  });
 }
 
 function applyVehicleTypeFilter(list, filter) {
@@ -304,10 +317,12 @@ async function renderBrandManagement({ container, filter, logEl, onOverrideChang
       if (!item) return;
       const nextActive = item.active === false;
       try {
+        const actor = getAuditActor();
         await updateDoc(doc(db, "vehicleMakeOverrides", id), {
           active: nextActive,
           updatedAt: serverTimestamp(),
-          updatedBy: auth.currentUser?.email || "unknown",
+          updatedBy: actor.updatedBy,
+          updatedByName: actor.updatedByName,
         });
         appendLine(logEl, `Override ${item.name}: active=${nextActive}`);
         await materializeOverridesNow(logEl);
@@ -407,7 +422,8 @@ async function saveOverrideFromForm(logEl) {
     return;
   }
 
-  const actorEmail = auth.currentUser?.email || "unknown";
+  const actor = getAuditActor();
+  const actorEmail = actor.updatedBy;
   const vehicleType = normalizeVehicleType(brandTypeInput.value);
   const isActive = brandActiveInput.checked;
   const docId = editingOverrideId || normalizeOverrideId(brandName);
@@ -434,10 +450,12 @@ async function saveOverrideFromForm(logEl) {
     source: "manual_override",
     updatedAt: serverTimestamp(),
     updatedBy: actorEmail,
+    updatedByName: actor.updatedByName,
   };
   if (!editingOverrideId) {
     payload.createdAt = serverTimestamp();
     payload.createdBy = actorEmail;
+    payload.createdByName = actor.updatedByName;
   }
 
   try {

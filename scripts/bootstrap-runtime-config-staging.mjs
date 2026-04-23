@@ -79,6 +79,7 @@ async function main() {
       enabled: true,
       version: previousVersion + 1,
       updatedBy: "bootstrap-runtime-config-staging",
+      updatedByName: "Sistema bootstrap staging",
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 

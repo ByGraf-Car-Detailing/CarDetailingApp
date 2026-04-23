@@ -14,6 +14,10 @@ import {
   deleteDoc,
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth, db } from "../services/authService.js";
+import {
+  resolveOperatorAuditName,
+  resolveSessionOperatorName,
+} from "../services/operatorIdentity.js";
 import { majorBrandsPolicy } from "./majorBrandsPolicy.js";
 import {
   buildBaselineRegistry,
@@ -163,6 +167,13 @@ function getActorEmail() {
   return auth.currentUser?.email || null;
 }
 
+function getActorName() {
+  return resolveOperatorAuditName({
+    sessionDisplayName: resolveSessionOperatorName(),
+    authDisplayName: auth.currentUser?.displayName || "",
+  });
+}
+
 function assertRuntimeTarget(target) {
   if (target === "prod" && !PROD_CATALOG_SYNC_ENABLED) {
     throw new Error("Catalog sync su prod bloccato da policy. Validare staging e riaprire gate esplicitamente.");
@@ -197,7 +208,7 @@ async function fetchModelsForMake(makeId, makeName) {
   return Array.isArray(data?.Results) ? data.Results : [];
 }
 
-async function acquireLock(target, jobId, actorEmail) {
+async function acquireLock(target, jobId, actorEmail, actorName) {
   const lockRef = doc(db, "catalogSyncLocks", target);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(lockRef);
@@ -216,6 +227,7 @@ async function acquireLock(target, jobId, actorEmail) {
       target,
       jobId,
       lockedByEmail: actorEmail,
+      lockedByName: actorName,
       lockedAt: now,
       expiresAt: Timestamp.fromMillis(nowMs + LOCK_TTL_MS),
       updatedAt: now,
@@ -241,10 +253,11 @@ async function releaseLock(lockRef) {
   }
 }
 
-async function createJob({ actorEmail, target, mode, maxWrites }) {
+async function createJob({ actorEmail, actorName, target, mode, maxWrites }) {
   const jobsRef = collection(db, "catalogSyncJobs");
   const jobDoc = await addDoc(jobsRef, {
     actorEmail,
+    actorName,
     target,
     mode,
     maxWrites,
@@ -257,10 +270,11 @@ async function createJob({ actorEmail, target, mode, maxWrites }) {
   return jobDoc.id;
 }
 
-async function appendJobLog(jobId, actorEmail, level, message, extra = null) {
+async function appendJobLog(jobId, actorEmail, actorName, level, message, extra = null) {
   await addDoc(collection(db, "catalogSyncJobs", jobId, "logs"), {
     jobId,
     actorEmail,
+    actorName,
     level,
     message,
     extra,
@@ -322,7 +336,7 @@ async function applyWriteOperation(op, target) {
   await heartbeatLock(target);
 }
 
-async function runMajorMakes(target, maxWrites, jobId, actorEmail) {
+async function runMajorMakes(target, maxWrites, jobId, actorEmail, actorName) {
   const [carsRaw, motorcyclesRaw, existingById, overrides] = await Promise.all([
     fetchMakesForType("car"),
     fetchMakesForType("motorcycle"),
@@ -353,11 +367,11 @@ async function runMajorMakes(target, maxWrites, jobId, actorEmail) {
     overrides: effective.overrideStats,
     blockedCollisions: effective.overrideStats.blockedCollisions,
   };
-  await appendJobLog(jobId, actorEmail, "info", "major makes sync completed", summary);
+  await appendJobLog(jobId, actorEmail, actorName, "info", "major makes sync completed", summary);
   return summary;
 }
 
-async function runModels(target, maxWrites, jobId, actorEmail) {
+async function runModels(target, maxWrites, jobId, actorEmail, actorName) {
   const activeMakes = await loadActiveMakes();
   const existingModelsByMake = await loadExistingModelsByMake(activeMakes);
   const modelsByMake = new Map();
@@ -379,28 +393,33 @@ async function runModels(target, maxWrites, jobId, actorEmail) {
     skipped: plan.skippedNoChange,
     skippedManualConflict: plan.skippedManualConflict,
   };
-  await appendJobLog(jobId, actorEmail, "info", "models sync completed", summary);
+  await appendJobLog(jobId, actorEmail, actorName, "info", "models sync completed", summary);
   return summary;
 }
 
 async function runCatalogSync({ target, mode, maxWrites }) {
   const actorEmail = getActorEmail();
+  const actorName = getActorName();
   if (!actorEmail) throw new Error("Utente non autenticato.");
   assertRuntimeTarget(target);
   const safeMaxWrites = Math.max(1, Number(maxWrites) || 1);
-  const jobId = await createJob({ actorEmail, target, mode, maxWrites: safeMaxWrites });
-  const lockRef = await acquireLock(target, jobId, actorEmail);
-  await appendJobLog(jobId, actorEmail, "info", "job started", { target, mode, maxWrites: safeMaxWrites });
+  const jobId = await createJob({ actorEmail, actorName, target, mode, maxWrites: safeMaxWrites });
+  const lockRef = await acquireLock(target, jobId, actorEmail, actorName);
+  await appendJobLog(jobId, actorEmail, actorName, "info", "job started", {
+    target,
+    mode,
+    maxWrites: safeMaxWrites,
+  });
 
   try {
     let summary;
     if (mode === "makes") {
-      summary = await runMajorMakes(target, safeMaxWrites, jobId, actorEmail);
+      summary = await runMajorMakes(target, safeMaxWrites, jobId, actorEmail, actorName);
     } else if (mode === "models") {
-      summary = await runModels(target, safeMaxWrites, jobId, actorEmail);
+      summary = await runModels(target, safeMaxWrites, jobId, actorEmail, actorName);
     } else if (mode === "reference") {
-      const makes = await runMajorMakes(target, safeMaxWrites, jobId, actorEmail);
-      const models = await runModels(target, safeMaxWrites, jobId, actorEmail);
+      const makes = await runMajorMakes(target, safeMaxWrites, jobId, actorEmail, actorName);
+      const models = await runModels(target, safeMaxWrites, jobId, actorEmail, actorName);
       summary = { policyVersion: majorBrandsPolicy.version, makes, models };
     } else {
       throw new Error(`Mode non supportata: ${mode}`);
@@ -411,7 +430,7 @@ async function runCatalogSync({ target, mode, maxWrites }) {
   } catch (error) {
     const message = error?.message || String(error);
     const details = error?.details || null;
-    await appendJobLog(jobId, actorEmail, "error", message, details);
+    await appendJobLog(jobId, actorEmail, actorName, "error", message, details);
     await finishJob(jobId, "failed", { error: message, blockedCollisions: details });
     throw error;
   } finally {

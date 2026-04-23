@@ -1,6 +1,12 @@
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { auth, db } from "../services/authService.js";
 import {
+  buildOperatorAuditActor,
+  OPERATOR_UNKNOWN_NAME,
+  resolveOperatorAuditName,
+  resolveSessionOperatorName,
+} from "../services/operatorIdentity.js";
+import {
   APPOINTMENT_LOCATIONS_DOC,
   RUNTIME_COLLECTION,
   getAppointmentLocations,
@@ -61,7 +67,7 @@ function renderMeta(meta) {
     return;
   }
 
-  const updatedBy = meta.updatedBy || "n/d";
+  const updatedByName = resolveOperatorAuditName({ updatedByName: meta.updatedByName });
   const version = Number.isInteger(meta.version) ? meta.version : 0;
   let updatedAt = "n/d";
   const rawUpdatedAt = meta.updatedAt;
@@ -75,7 +81,7 @@ function renderMeta(meta) {
 
   el.innerHTML = `
     <div><strong>version:</strong> ${version}</div>
-    <div><strong>updatedBy:</strong> ${escapeHtml(updatedBy)}</div>
+    <div><strong>operatore:</strong> ${escapeHtml(updatedByName)}</div>
     <div><strong>updatedAt:</strong> ${escapeHtml(updatedAt)}</div>
   `;
 }
@@ -155,7 +161,31 @@ async function readRuntimeMeta() {
   const ref = doc(db, RUNTIME_COLLECTION, APPOINTMENT_LOCATIONS_DOC);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  return snap.data() || null;
+  const data = snap.data() || {};
+  const updatedByName = typeof data.updatedByName === "string" ? data.updatedByName.trim() : "";
+  if (updatedByName) return data;
+
+  const legacyUpdatedBy = typeof data.updatedBy === "string" ? data.updatedBy.trim() : "";
+  if (!legacyUpdatedBy || legacyUpdatedBy === "unknown") {
+    return { ...data, updatedByName: OPERATOR_UNKNOWN_NAME };
+  }
+
+  try {
+    const allowedUserSnap = await getDoc(doc(db, "allowedUsers", legacyUpdatedBy));
+    const allowedDisplayName =
+      allowedUserSnap.exists() && typeof allowedUserSnap.data()?.displayName === "string"
+        ? allowedUserSnap.data().displayName
+        : "";
+    return {
+      ...data,
+      updatedByName: resolveOperatorAuditName({ allowedDisplayName }),
+    };
+  } catch {
+    return {
+      ...data,
+      updatedByName: OPERATOR_UNKNOWN_NAME,
+    };
+  }
 }
 
 async function saveLocations() {
@@ -171,10 +201,18 @@ async function saveLocations() {
 
   showMessage("success", "Salvataggio in corso...");
   try {
+    const auditActor = buildOperatorAuditActor({
+      email: auth.currentUser?.email || "",
+      operatorId: auth.currentUser?.uid || "",
+      sessionDisplayName: resolveSessionOperatorName(),
+      authDisplayName: auth.currentUser?.displayName || "",
+    });
+
     await saveAppointmentLocations({
       db,
       locations: workingLocations,
-      actorEmail: auth.currentUser?.email || "unknown",
+      actorEmail: auditActor.updatedBy,
+      actorName: auditActor.updatedByName,
       previousVersion: currentVersion,
       enabled: true,
     });
