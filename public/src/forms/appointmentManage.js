@@ -14,6 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { openModal } from "../utils/modal.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
+import { getAppointmentLocations } from "../services/runtimeConfigService.js";
 import {
   buildSortableHeaderRow,
   loadSortState,
@@ -39,6 +40,32 @@ const DELETE_ICON = `
 `;
 const APPOINTMENTS_TABLE_ID = "appointments.manage";
 const DEFAULT_APPOINTMENTS_SORT = { key: "workDate", direction: "desc" };
+const LOCATION_EMPTY_LABEL = "-- Non impostata --";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function resolveLocationDisplay(location) {
+  const clean = typeof location === "string" ? location.trim() : "";
+  return clean || "N/D";
+}
+
+function buildLocationOptionsMarkup(locations, selectedLocation) {
+  const cleanSelected = typeof selectedLocation === "string" ? selectedLocation.trim() : "";
+  const options = [`<option value="">${LOCATION_EMPTY_LABEL}</option>`];
+  for (const location of locations) {
+    const escaped = escapeHtml(location);
+    const selected = cleanSelected && cleanSelected.toLowerCase() === location.toLowerCase() ? " selected" : "";
+    options.push(`<option value="${escaped}"${selected}>${escaped}</option>`);
+  }
+  return options.join("");
+}
 
 async function populateJobTypeFilter(select) {
   select.innerHTML = `<option value="">Tutti</option>`;
@@ -347,6 +374,11 @@ export async function loadAppointments() {
     }
     const data = snap.data();
     const canEditAll = userRole === "admin" || (userRole === "staff" && data.createdBy === userEmail);
+    const currentLocation = typeof data.location === "string" ? data.location.trim() : "";
+    const availableLocations = await getAppointmentLocations({
+      db,
+      includeLegacyLocation: currentLocation,
+    });
 
     editSection.innerHTML = `<h3> Modifica Appuntamento</h3>
       <form id="appointmentEditForm">
@@ -358,6 +390,10 @@ export async function loadAppointments() {
         <input type="text" value="${data.jobTypeData?.description || ""}" readonly />
         <label>Operatore:</label>
         <input type="text" value="${formatOperatore(data, operatorDisplayById)}" readonly />
+        <label>Sede:</label>
+        <select id="editLocation" ${canEditAll ? "" : "disabled"}>
+          ${buildLocationOptionsMarkup(availableLocations, currentLocation)}
+        </select>
         <label>Stato:</label>
         <select id="editStatus" ${canEditAll ? "" : "disabled"}>
           ${statusOptions(data.status)}
@@ -408,6 +444,7 @@ export async function loadAppointments() {
         const endWork = document.getElementById("editEndWork").value;
         const startDelivery = document.getElementById("editStartDelivery").value;
         const endDelivery = document.getElementById("editEndDelivery").value;
+        const nextLocation = (document.getElementById("editLocation")?.value || "").trim();
 
         if (!startReception || !endReception || !startWork || !endWork || !startDelivery || !endDelivery) {
           msgBox.textContent = " Compila tutte le date/ore.";
@@ -437,6 +474,7 @@ export async function loadAppointments() {
           endWork,
           startDelivery,
           endDelivery,
+          location: nextLocation,
           noteInternal: document.getElementById("editNoteInternal").value.trim(),
           updatedAt: serverTimestamp(),
           history: [
@@ -446,6 +484,8 @@ export async function loadAppointments() {
               updatedAt: new Date().toISOString(),
               oldStatus: data.status,
               newStatus: document.getElementById("editStatus").value,
+              oldLocation: currentLocation,
+              newLocation: nextLocation,
             }
           ]
         };
@@ -555,6 +595,7 @@ export async function loadAppointments() {
       <div class="client-view-row"><strong>N. Telaio:</strong> ${data.vehicleData?.chassisNumber || "N/D"}</div>
       <div class="client-view-row"><strong>Tipo lavoro:</strong> ${data.jobTypeData?.description || "N/D"}</div>
       <div class="client-view-row"><strong>Operatore:</strong> ${formatOperatore(data, operatorDisplayById)}</div>
+      <div class="client-view-row"><strong>Sede:</strong> ${resolveLocationDisplay(data.location)}</div>
       <div class="client-view-row"><strong>Stato:</strong> ${formatStatus(data.status || "N/D")}</div>
       <div class="client-view-row"><strong>Ricezione:</strong> ${formatDateTime(data.startReception)} - ${formatDateTime(data.endReception)}</div>
       <div class="client-view-row"><strong>Lavorazione:</strong> ${formatDateTime(data.startWork)} - ${formatDateTime(data.endWork)}</div>
