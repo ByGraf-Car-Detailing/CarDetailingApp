@@ -42,7 +42,7 @@ Assert-Contains -Path "public/src/app.js" -Pattern "IS_STAGING_RUNTIME" -Label "
 Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Amministrazione""" -Label "admin menu declaration"
 Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Catalogo Marche""" -Label "catalog button declaration"
 Assert-Contains -Path "public/src/dashboardController.js" -Pattern "addRoleButton(""Gestione Sedi""" -Label "runtime config button declaration"
-Assert-Contains -Path "public/src/dashboardController.js" -Pattern "if (isStagingRuntime)" -Label "catalog button staging-only guard"
+Assert-Contains -Path "public/src/dashboardController.js" -Pattern "&& isStagingRuntime" -Label "catalog button staging-only guard"
 Assert-Contains -Path "public/src/viewEffects.js" -Pattern "if (!isStagingRuntime)" -Label "restore-view prod fallback guard"
 
 # 4) Production hard guard in html entrypoint must exist.
