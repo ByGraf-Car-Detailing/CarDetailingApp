@@ -4,6 +4,7 @@ import { collection, addDoc, getDocs, getDoc, doc, query, where, serverTimestamp
 import { showDashboard } from "../app.js";
 import { openModal, closeModal } from "../utils/modal.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
+import { getAppointmentLocations } from "../services/runtimeConfigService.js";
 
 // DOM elements: step-by-step fields
 const formSection = document.getElementById("appointmentFormSection");
@@ -70,9 +71,6 @@ let state = {
   noteInternal: "",
 };
 
-const DEFAULT_APPOINTMENT_LOCATIONS = ["Lugano Centro", "Lugano Stampa"];
-let appointmentLocationsCache = null;
-
 function toPositiveInt(value, fallback = 0) {
   const n = Number.parseInt(String(value ?? "").trim(), 10);
   if (!Number.isFinite(n) || Number.isNaN(n) || n < 0) return fallback;
@@ -127,53 +125,12 @@ function hideAllSteps() {
 }
 
 // === STEP 1: SEDE ===
-function sanitizeAppointmentLocations(value) {
-  if (!Array.isArray(value)) return [];
-  const seen = new Set();
-  const sanitized = [];
-  for (const item of value) {
-    if (typeof item !== "string") continue;
-    const clean = item.trim();
-    if (!clean) continue;
-    const key = clean.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    sanitized.push(clean);
-  }
-  return sanitized;
-}
-
-async function resolveAppointmentLocations() {
-  if (appointmentLocationsCache) {
-    return appointmentLocationsCache;
-  }
-  try {
-    const configRef = doc(db, "runtimeConfig", "appointmentLocations");
-    const configSnap = await getDoc(configRef);
-    if (configSnap.exists()) {
-      const configData = configSnap.data() || {};
-      const parsed = sanitizeAppointmentLocations(configData.locations);
-      if (parsed.length > 0) {
-        appointmentLocationsCache = parsed;
-        return appointmentLocationsCache;
-      }
-      console.warn("[appointments] runtimeConfig/appointmentLocations invalid: using fallback defaults.");
-    } else {
-      console.warn("[appointments] runtimeConfig/appointmentLocations missing: using fallback defaults.");
-    }
-  } catch (error) {
-    console.warn("[appointments] failed to load runtimeConfig/appointmentLocations:", error?.message || error);
-  }
-  appointmentLocationsCache = [...DEFAULT_APPOINTMENT_LOCATIONS];
-  return appointmentLocationsCache;
-}
-
 function buildLocationOptionsMarkup(locations) {
   return locations.map((location) => `<option value="${location}">${location}</option>`).join("");
 }
 
 async function renderStepLocation() {
-  const locations = await resolveAppointmentLocations();
+  const locations = await getAppointmentLocations({ db });
   stepLocation.innerHTML = `
     <label>Sede:</label>
     <select id="locationSelectAppointment" required>
