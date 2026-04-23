@@ -106,6 +106,7 @@ export function createDashboardController({
         addRoleButton("Gestione Clienti", () => onNavigate("gestioneClienti"));
         if (isStagingRuntime) {
           addRoleButton("Catalog Sync Admin", () => onNavigate("catalogSyncAdmin"));
+          addRoleButton("Runtime Config Admin", () => onNavigate("runtimeConfigAdmin"));
         }
       }
     }

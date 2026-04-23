@@ -88,6 +88,36 @@
     <textarea id="catalogSyncLog" rows="14" readonly style="width:100%;"></textarea>
   </section>
 
+  <section id="runtimeConfigSection" style="display:none;">
+    <h3>Runtime Config Admin</h3>
+    <p class="text-muted">Gestione configurazioni runtime (capability attuale: sedi appuntamenti).</p>
+    <div class="toolbar">
+      <button id="backToDashboardRuntimeConfigBtn" class="btn btn--ghost">Torna alla Dashboard</button>
+    </div>
+
+    <fieldset>
+      <legend>Sedi Appuntamenti</legend>
+      <label for="runtimeLocationInput">Nuova sede:</label>
+      <div class="runtime-config-row">
+        <input id="runtimeLocationInput" type="text" placeholder="Es. Lugano Centro" />
+        <button id="runtimeLocationAddBtn" type="button" class="btn btn--primary">Aggiungi</button>
+      </div>
+      <div id="runtimeLocationsList" class="runtime-config-list"></div>
+      <div class="form-actions">
+        <button id="runtimeLocationResetBtn" type="button" class="btn btn--ghost">Ripristina</button>
+        <button id="runtimeLocationSaveBtn" type="button" class="btn btn--primary">Salva Configurazione</button>
+      </div>
+      <div id="runtimeConfigMessage" class="form-msg" style="display:none;"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Metadati Config</legend>
+      <div id="runtimeConfigMeta" class="runtime-config-meta text-muted">
+        Nessun metadato disponibile.
+      </div>
+    </fieldset>
+  </section>
+
   <!-- FORM CLIENTE (Wizard) -->
   <section id="clientFormSection" style="display: none;">
     <h3>Aggiungi Cliente / Azienda</h3>

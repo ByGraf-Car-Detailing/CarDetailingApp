@@ -7,8 +7,9 @@ import { initRouter } from "./router.js";
 import { createDashboardController } from "./dashboardController.js";
 import { createViewEffects } from "./viewEffects.js";
 import { createDataIntegrityChecks } from "./dataIntegrityChecks.js";
+import { applyUITextRepair } from "./utils/uiTextRepair.js";
 
-const RUNTIME_BUILD_TAG = "20260413-prod-hotfix-3";
+const RUNTIME_BUILD_TAG = "20260423-staging-text-repair-1";
 
 const loginContainer = document.getElementById("loginContainer");
 const dashboardContainer = document.getElementById("dashboardContainer");
@@ -25,6 +26,7 @@ const alertBanner = document.getElementById("alertBanner");
 const appointmentManageSection = document.getElementById("appointmentManageSection");
 const appointmentFormSection = document.getElementById("appointmentFormSection");
 const catalogSyncSection = document.getElementById("catalogSyncSection");
+const runtimeConfigSection = document.getElementById("runtimeConfigSection");
 
 window.__FIREBASE_PROJECT_ID__ = db.app?.options?.projectId || "";
 const hostname = window.location.hostname;
@@ -34,6 +36,7 @@ const IS_STAGING_RUNTIME = isStagingProject || isLocalRuntime;
 
 const sectionByView = [
   { key: "catalogSyncAdmin", el: catalogSyncSection },
+  { key: "runtimeConfigAdmin", el: runtimeConfigSection },
   { key: "gestioneAppuntamenti", el: appointmentManageSection },
   { key: "nuovoAppuntamento", el: appointmentFormSection },
   { key: "gestioneVeicoli", el: vehicleManageSection },
@@ -52,6 +55,7 @@ function hideAllSections() {
   appointmentManageSection.style.display = "none";
   appointmentFormSection.style.display = "none";
   catalogSyncSection.style.display = "none";
+  runtimeConfigSection.style.display = "none";
   roleButtons.style.display = "none";
 }
 
@@ -64,6 +68,7 @@ const viewEffects = createViewEffects({
     appointmentManageSection,
     appointmentFormSection,
     catalogSyncSection,
+    runtimeConfigSection,
   },
   runtimeBuildTag: RUNTIME_BUILD_TAG,
   isStagingRuntime: IS_STAGING_RUNTIME,
@@ -117,6 +122,7 @@ function bindDashboardBackButtons() {
     "backToDashboardVehicleBtn",
     "backToDashboardAppointmentsBtn",
     "backToDashboardAppointmentBtn",
+    "backToDashboardRuntimeConfigBtn",
   ];
 
   for (const id of backToDashboardIds) {
@@ -157,6 +163,36 @@ const sessionController = initSessionManager({
 const jsErrorBanner = document.getElementById("jsErrorBanner");
 initGlobalErrorHandling({ bannerEl: jsErrorBanner });
 
+function initUITextRepairObserver() {
+  applyUITextRepair();
+  window.addEventListener("DOMContentLoaded", applyUITextRepair);
+  const observer = new MutationObserver(() => applyUITextRepair());
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+async function cleanupLegacyCachesInStaging() {
+  if (!IS_STAGING_RUNTIME) return;
+
+  const markerKey = `staging-cache-cleanup:${RUNTIME_BUILD_TAG}`;
+  if (window.sessionStorage?.getItem(markerKey) === "done") return;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((reg) => reg.unregister()));
+    }
+
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+    }
+  } catch (err) {
+    console.warn("[cache-cleanup] staging cleanup skipped:", err?.message || err);
+  } finally {
+    window.sessionStorage?.setItem(markerKey, "done");
+  }
+}
+
 window.addEventListener("beforeunload", () => {
   sessionController.teardown();
 });
@@ -166,6 +202,8 @@ window.addEventListener("beforeunload", () => {
 });
 
 bindDashboardBackButtons();
+initUITextRepairObserver();
+void cleanupLegacyCachesInStaging();
 
 // Boot hidden states
 showLoginState();
