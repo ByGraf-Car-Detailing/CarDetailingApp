@@ -164,6 +164,11 @@ service cloud.firestore {
       }
     }
 
+    match /runtimeConfig/{docId} {
+      allow read: if isAllowedRole();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /syncErrors/{id} {
       allow read: if isAdmin();
       allow create: if isAllowedRole();

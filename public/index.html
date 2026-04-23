@@ -473,10 +473,17 @@
         if (!isProdHost) return;
         const roleButtons = document.getElementById("roleButtons");
         if (!roleButtons) return;
+        const blockedLabels = new Set([
+          "amministrazione",
+          "catalogo marche",
+          "gestione sedi",
+          "catalog sync admin",
+          "runtime config admin"
+        ]);
         const candidates = roleButtons.querySelectorAll("button, a");
         for (const el of candidates) {
           const label = (el.textContent || "").trim().toLowerCase();
-          if (label === "catalog sync admin") {
+          if (blockedLabels.has(label)) {
             el.remove();
           }
         }
@@ -508,7 +515,7 @@
   </script>
 
   <!-- Script principali -->
-  <script type="module" src="/src/app.js?v=20260413-prod-hotfix-3"></script>
+  <script type="module" src="/src/app.js?v=20260423-staging-runtimeconfig-fix-1"></script>
   <script type="module" src="/src/forms/clientForm.js"></script>
   <script type="module" src="/src/forms/clientEdit.js"></script>
   <script type="module" src="/src/forms/vehicleForm.js"></script>

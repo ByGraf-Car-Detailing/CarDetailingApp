@@ -12,6 +12,12 @@ let originalLocations = [];
 let workingLocations = [];
 let currentVersion = 0;
 
+function isPermissionError(err) {
+  const code = typeof err?.code === "string" ? err.code.toLowerCase() : "";
+  const message = typeof err?.message === "string" ? err.message.toLowerCase() : "";
+  return code.includes("permission-denied") || message.includes("insufficient permissions");
+}
+
 function q(id) {
   return document.getElementById(id);
 }
@@ -186,7 +192,11 @@ async function saveLocations() {
     renderMeta(meta);
     showMessage("success", "Configurazione sedi salvata con successo.");
   } catch (err) {
-    showMessage("error", `Errore salvataggio: ${err?.message || String(err)}`);
+    if (isPermissionError(err)) {
+      showMessage("error", "Permessi insufficienti: solo admin autorizzati possono salvare la configurazione.");
+    } else {
+      showMessage("error", `Errore salvataggio: ${err?.message || String(err)}`);
+    }
   } finally {
     if (saveBtn) saveBtn.disabled = false;
     if (addBtn) addBtn.disabled = false;
@@ -246,25 +256,45 @@ function bindActions() {
 
 export async function initRuntimeConfigUI() {
   if (!q("runtimeConfigSection")) return;
+  const titleEl = q("runtimeConfigSection").querySelector("h3");
+  if (titleEl) titleEl.textContent = "Gestione Sedi";
   bindActions();
   clearMessage();
   showMessage("success", "Caricamento configurazione...");
 
   try {
-    const [locations, meta] = await Promise.all([
-      getAppointmentLocations({ db }),
-      readRuntimeMeta(),
-    ]);
-
+    const locations = await getAppointmentLocations({ db });
     originalLocations = [...locations];
     workingLocations = [...locations];
-    currentVersion = Number.isInteger(meta?.version) ? meta.version : 0;
-
     renderLocations();
-    renderMeta(meta);
-    clearMessage();
+
+    try {
+      const meta = await readRuntimeMeta();
+      currentVersion = Number.isInteger(meta?.version) ? meta.version : 0;
+      renderMeta(meta);
+      if (!meta) {
+        showMessage(
+          "error",
+          "Configurazione runtime non inizializzata: in uso sedi fallback finche non viene salvata la prima configurazione."
+        );
+      } else {
+        clearMessage();
+      }
+    } catch (metaError) {
+      currentVersion = 0;
+      renderMeta(null);
+      if (isPermissionError(metaError)) {
+        showMessage("error", "Permessi insufficienti su runtimeConfig: sedi caricate in fallback.");
+      } else {
+        showMessage("error", `Errore metadati: ${metaError?.message || String(metaError)}`);
+      }
+    }
   } catch (err) {
-    showMessage("error", `Errore caricamento: ${err?.message || String(err)}`);
+    if (isPermissionError(err)) {
+      showMessage("error", "Permessi insufficienti su runtimeConfig: sedi caricate in fallback.");
+    } else {
+      showMessage("error", `Errore caricamento: ${err?.message || String(err)}`);
+    }
   }
 
   if (!uiBound) uiBound = true;

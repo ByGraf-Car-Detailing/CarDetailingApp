@@ -97,17 +97,29 @@ export function createDashboardController({
     const welcomeName = userName || resolveOperatorDisplayName({ email: userEmail, operatorId: userEmail }) || "utente";
     welcomeMsg.textContent = `Benvenuto ${welcomeName} (Ruolo: ${userRole})`;
 
-    if (userRole === "admin" || userRole === "staff") {
+    function renderPrimaryMenu() {
+      roleButtons.innerHTML = "";
       addRoleButton("Gestione appuntamenti", () => onNavigate("gestioneAppuntamenti"));
       addRoleButton("Nuovo appuntamento", () => onNavigate("nuovoAppuntamento"));
       addRoleButton("Gestione Veicoli", () => onNavigate("gestioneVeicoli"));
 
       if (userRole === "admin") {
         addRoleButton("Gestione Clienti", () => onNavigate("gestioneClienti"));
-        if (isStagingRuntime) {
-          addRoleButton("Catalog Sync Admin", () => onNavigate("catalogSyncAdmin"));
-          addRoleButton("Runtime Config Admin", () => onNavigate("runtimeConfigAdmin"));
-        }
+      }
+    }
+
+    function renderAdminMenu() {
+      roleButtons.innerHTML = "";
+      addRoleButton("Catalogo Marche", () => onNavigate("catalogSyncAdmin"));
+      addRoleButton("Gestione Sedi", () => onNavigate("runtimeConfigAdmin"));
+      addRoleButton("Torna al menu principale", renderPrimaryMenu);
+    }
+
+    if (userRole === "admin" || userRole === "staff") {
+      renderPrimaryMenu();
+
+      if (userRole === "admin" && isStagingRuntime) {
+        addRoleButton("Amministrazione", renderAdminMenu);
       }
     }
 

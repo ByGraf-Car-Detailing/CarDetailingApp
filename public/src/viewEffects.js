@@ -38,6 +38,8 @@ export function createViewEffects({
       }
 
       sections.catalogSyncSection.style.display = "block";
+      const catalogTitle = sections.catalogSyncSection.querySelector("h3");
+      if (catalogTitle) catalogTitle.textContent = "Catalogo Marche";
       import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
       return;
     }
@@ -50,7 +52,7 @@ export function createViewEffects({
       }
 
       sections.runtimeConfigSection.style.display = "block";
-      import("./admin/runtimeConfigUI.js?v=20260423-1").then((m) => m.initRuntimeConfigUI());
+      import("./admin/runtimeConfigUI.js?v=20260423-2").then((m) => m.initRuntimeConfigUI());
     }
   }
 
