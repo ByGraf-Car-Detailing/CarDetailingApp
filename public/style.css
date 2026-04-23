@@ -856,6 +856,58 @@ form > div:first-child button {
   margin-bottom: var(--space-4);
 }
 
+.runtime-config-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.runtime-config-row input {
+  flex: 1 1 280px;
+  max-width: none;
+}
+
+.runtime-config-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.runtime-config-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.runtime-config-item-label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-config-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.runtime-config-actions .btn {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.runtime-config-meta {
+  line-height: 1.6;
+}
+
 .accordion-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius);

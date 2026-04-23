@@ -39,6 +39,18 @@ export function createViewEffects({
 
       sections.catalogSyncSection.style.display = "block";
       import("./admin/catalogSyncUI.js?v=20260402-2").then((m) => m.initCatalogSyncUI());
+      return;
+    }
+
+    if (viewKey === "runtimeConfigAdmin") {
+      if (!isStagingRuntime) {
+        router.clearCurrentView();
+        onGoToDashboard();
+        return;
+      }
+
+      sections.runtimeConfigSection.style.display = "block";
+      import("./admin/runtimeConfigUI.js?v=20260423-1").then((m) => m.initRuntimeConfigUI());
     }
   }
 
