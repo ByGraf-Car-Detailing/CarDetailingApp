@@ -46,8 +46,30 @@ test("admin: dashboard buttons -> correct sections", async ({ page }) => {
   await page.getByTestId("dash-amministrazione").click();
   await page.getByTestId("dash-catalogo-marche").click();
   await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
+  await page.locator("#backToAdminCatalogSyncBtn").click();
+  await expect(page.getByTestId("dash-catalogo-marche")).toBeVisible({ timeout: 15000 });
+  await page.getByTestId("dash-catalogo-marche").click();
+  await expect(page.locator("#catalogSyncSection")).toBeVisible({ timeout: 15000 });
   await page.locator("#backToDashboardCatalogSyncBtn").click();
   await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("dash-amministrazione")).toBeVisible({ timeout: 15000 });
+});
+
+test("admin: runtime config back buttons -> admin menu then dashboard", async ({ page }) => {
+  await login(page, "admin@test.local", "Passw0rd!");
+
+  await page.getByTestId("dash-amministrazione").click();
+  await page.getByTestId("dash-gestione-sedi").click();
+  await expect(page.locator("#runtimeConfigSection")).toBeVisible({ timeout: 15000 });
+
+  await page.locator("#backToAdminRuntimeConfigBtn").click();
+  await expect(page.getByTestId("dash-gestione-sedi")).toBeVisible({ timeout: 15000 });
+  await page.getByTestId("dash-gestione-sedi").click();
+  await expect(page.locator("#runtimeConfigSection")).toBeVisible({ timeout: 15000 });
+
+  await page.locator("#backToDashboardRuntimeConfigBtn").click();
+  await expect(page.locator("#dashboardContainer")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("dash-amministrazione")).toBeVisible({ timeout: 15000 });
 });
 
 test("admin: restore currentView catalog sync then back returns to dashboard", async ({ page }) => {

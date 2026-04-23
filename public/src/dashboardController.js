@@ -14,6 +14,8 @@ export function createDashboardController({
   onNavigate,
   hideSteps,
 }) {
+  let currentUserRole = "user";
+
   function addRoleButton(label, action) {
     const btn = document.createElement("button");
     btn.className = "btn btn--primary";
@@ -27,6 +29,32 @@ export function createDashboardController({
 
     btn.addEventListener("click", action);
     roleButtons.appendChild(btn);
+  }
+
+  function renderPrimaryMenu() {
+    addRoleButton("Gestione appuntamenti", () => onNavigate("gestioneAppuntamenti"));
+    addRoleButton("Nuovo appuntamento", () => onNavigate("nuovoAppuntamento"));
+    addRoleButton("Gestione Veicoli", () => onNavigate("gestioneVeicoli"));
+
+    if (currentUserRole === "admin") {
+      addRoleButton("Gestione Clienti", () => onNavigate("gestioneClienti"));
+    }
+  }
+
+  function renderDashboardMenu() {
+    roleButtons.innerHTML = "";
+    renderPrimaryMenu();
+
+    if (currentUserRole === "admin" && isStagingRuntime) {
+      addRoleButton("Amministrazione", renderAdminMenu);
+    }
+  }
+
+  function renderAdminMenu() {
+    roleButtons.innerHTML = "";
+    addRoleButton("Catalogo Marche", () => onNavigate("catalogSyncAdmin"));
+    addRoleButton("Gestione Sedi", () => onNavigate("runtimeConfigAdmin"));
+    addRoleButton("Torna alla Dashboard", renderDashboardMenu);
   }
 
   async function resolveUserContext(userInfo = null) {
@@ -94,33 +122,12 @@ export function createDashboardController({
     roleButtons.innerHTML = "";
 
     const { userRole, userName, userEmail } = await resolveUserContext(userInfo);
+    currentUserRole = userRole;
     const welcomeName = userName || resolveOperatorDisplayName({ email: userEmail, operatorId: userEmail }) || "utente";
     welcomeMsg.textContent = `Benvenuto ${welcomeName} (Ruolo: ${userRole})`;
 
-    function renderPrimaryMenu() {
-      roleButtons.innerHTML = "";
-      addRoleButton("Gestione appuntamenti", () => onNavigate("gestioneAppuntamenti"));
-      addRoleButton("Nuovo appuntamento", () => onNavigate("nuovoAppuntamento"));
-      addRoleButton("Gestione Veicoli", () => onNavigate("gestioneVeicoli"));
-
-      if (userRole === "admin") {
-        addRoleButton("Gestione Clienti", () => onNavigate("gestioneClienti"));
-      }
-    }
-
-    function renderAdminMenu() {
-      roleButtons.innerHTML = "";
-      addRoleButton("Catalogo Marche", () => onNavigate("catalogSyncAdmin"));
-      addRoleButton("Gestione Sedi", () => onNavigate("runtimeConfigAdmin"));
-      addRoleButton("Torna al menu principale", renderPrimaryMenu);
-    }
-
     if (userRole === "admin" || userRole === "staff") {
-      renderPrimaryMenu();
-
-      if (userRole === "admin" && isStagingRuntime) {
-        addRoleButton("Amministrazione", renderAdminMenu);
-      }
+      renderDashboardMenu();
     }
 
     const vehicleForm = document.getElementById("vehicleForm");
@@ -129,6 +136,12 @@ export function createDashboardController({
   }
 
   return {
+    showAdminMenu: async () => {
+      await showDashboard();
+      if (currentUserRole === "admin" && isStagingRuntime) {
+        renderAdminMenu();
+      }
+    },
     showDashboard,
   };
 }

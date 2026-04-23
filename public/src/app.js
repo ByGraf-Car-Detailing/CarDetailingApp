@@ -112,6 +112,42 @@ function goToDashboard() {
   void showDashboard();
 }
 
+function goToAdminMenu() {
+  router.clearCurrentView();
+  void dashboardController.showAdminMenu();
+}
+
+function ensureAdminBackButtons() {
+  const defs = [
+    {
+      sectionId: "catalogSyncSection",
+      dashboardBtnId: "backToDashboardCatalogSyncBtn",
+      adminBtnId: "backToAdminCatalogSyncBtn",
+    },
+    {
+      sectionId: "runtimeConfigSection",
+      dashboardBtnId: "backToDashboardRuntimeConfigBtn",
+      adminBtnId: "backToAdminRuntimeConfigBtn",
+    },
+  ];
+
+  for (const def of defs) {
+    const section = document.getElementById(def.sectionId);
+    const dashboardBtn = document.getElementById(def.dashboardBtnId);
+    if (!section || !dashboardBtn) continue;
+
+    let adminBtn = document.getElementById(def.adminBtnId);
+    if (!adminBtn) {
+      adminBtn = document.createElement("button");
+      adminBtn.id = def.adminBtnId;
+      adminBtn.type = "button";
+      adminBtn.className = dashboardBtn.className || "btn btn--ghost";
+      adminBtn.textContent = "Torna indietro";
+      dashboardBtn.parentElement?.insertBefore(adminBtn, dashboardBtn);
+    }
+  }
+}
+
 function bindDashboardBackButtons() {
   const backToDashboardIds = [
     "backToDashboardCatalogSyncBtn",
@@ -132,6 +168,23 @@ function bindDashboardBackButtons() {
     el.onclick = (evt) => {
       evt.preventDefault();
       goToDashboard();
+    };
+  }
+}
+
+function bindAdminBackButtons() {
+  const adminBackIds = [
+    "backToAdminCatalogSyncBtn",
+    "backToAdminRuntimeConfigBtn",
+  ];
+
+  for (const id of adminBackIds) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+
+    el.onclick = (evt) => {
+      evt.preventDefault();
+      goToAdminMenu();
     };
   }
 }
@@ -201,7 +254,9 @@ window.addEventListener("beforeunload", () => {
   router.persistCurrentViewFromUI();
 });
 
+ensureAdminBackButtons();
 bindDashboardBackButtons();
+bindAdminBackButtons();
 initUITextRepairObserver();
 void cleanupLegacyCachesInStaging();
 

@@ -1,5 +1,7 @@
 const CANONICAL_TEXT_BY_ID = {
+  backToAdminCatalogSyncBtn: "Torna indietro",
   backToDashboardCatalogSyncBtn: "Torna alla Dashboard",
+  backToAdminRuntimeConfigBtn: "Torna indietro",
   backToDashboardRuntimeConfigBtn: "Torna alla Dashboard",
   backToListClientBtn: "Torna all'elenco",
   backToDashboardClientBtn: "Torna alla Dashboard",
