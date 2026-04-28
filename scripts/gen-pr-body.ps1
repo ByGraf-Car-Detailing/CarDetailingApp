@@ -9,7 +9,8 @@ param(
   [int]$TimeoutMs = 600000,
   [string]$Validation = "quality=pending; validate-governance=pending; staging evidence=pending",
   [string]$RollbackNotes = "N/A",
-  [string]$OutputPath
+  [string]$OutputPath,
+  [string]$TraceValidatorPath = "scripts/validate-coworking-trace.mjs"
 )
 
 $ErrorActionPreference = "Stop"
@@ -84,6 +85,16 @@ $body = @"
 
 if ($OutputPath) {
   Set-Content -Path $OutputPath -Value $body -Encoding UTF8
+  if (-not (Test-Path $TraceValidatorPath)) {
+    throw "validate-coworking-trace.mjs not found at: $TraceValidatorPath (ensure cwd is repo root)."
+  }
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    throw "node runtime is required for coworking trace validation."
+  }
+  & node $TraceValidatorPath --body-file $OutputPath
+  if ($LASTEXITCODE -ne 0) {
+    throw "Coworking trace validation failed for generated PR body."
+  }
   Write-Host "PR body generated at: $OutputPath"
 } else {
   Write-Output $body
