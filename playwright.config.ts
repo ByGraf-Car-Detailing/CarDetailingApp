@@ -8,6 +8,7 @@ const baseURL =
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: /.*\.spec\.ts/,
   outputDir: "./test-results",
 
   timeout: 30_000,

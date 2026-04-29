@@ -5,6 +5,11 @@ import { showDashboard } from "../app.js";
 import { openModal, closeModal } from "../utils/modal.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
 import { getAppointmentLocations } from "../services/runtimeConfigService.js";
+import {
+  buildLegacyFieldsFromJobItems,
+  normalizeJobItem,
+  toPositiveInt,
+} from "../services/jobItems.js";
 
 // DOM elements: step-by-step fields
 const formSection = document.getElementById("appointmentFormSection");
@@ -57,9 +62,7 @@ let state = {
   contactPersonData: null,
   vehicleId: "",
   vehicleData: null,
-  jobTypeId: "",
-  jobTypeData: null,
-  price: 0,
+  jobItems: [],
   dates: {
     startReception: "",
     endReception: "",
@@ -70,12 +73,6 @@ let state = {
   },
   noteInternal: "",
 };
-
-function toPositiveInt(value, fallback = 0) {
-  const n = Number.parseInt(String(value ?? "").trim(), 10);
-  if (!Number.isFinite(n) || Number.isNaN(n) || n < 0) return fallback;
-  return n;
-}
 
 //  Reset completo del form (wizard appointment)
 export function resetAppointmentForm() {
@@ -92,9 +89,7 @@ export function resetAppointmentForm() {
     contactPersonData: null,
     vehicleId: "",
     vehicleData: null,
-    jobTypeId: "",
-    jobTypeData: null,
-    price: 0,
+    jobItems: [],
     dates: {
       startReception: "",
       endReception: "",
@@ -1312,49 +1307,112 @@ function renderStepVehicleCard() {
 // === STEP 8: TIPO LAVORO ===
 async function renderStepJobType() {
   stepJobType.innerHTML = `
-    <label>Tipo lavoro:</label>
-    <select id="jobTypeSelectAppointment" required></select>
-    <input type="number" id="priceInputAppointment" min="0" placeholder="Prezzo ()" style="margin-left:10px; width:110px;" />
+    <label>Servizi:</label>
+    <div id="jobItemsEditor"></div>
+    <div class="form-actions" style="justify-content:flex-start;">
+      <button type="button" id="addJobItemBtn" class="btn btn--ghost">Aggiungi servizio</button>
+    </div>
+    <div id="jobItemsTotal" class="text-muted"></div>
   `;
   stepJobType.style.display = "block";
-  const jobTypeSelect = document.getElementById("jobTypeSelectAppointment");
-  const priceInput = document.getElementById("priceInputAppointment");
-
-  // Carica jobTypes da collezione
-  jobTypeSelect.innerHTML = `<option value="">-- Seleziona --</option>`;
+  const editor = document.getElementById("jobItemsEditor");
+  const totalNode = document.getElementById("jobItemsTotal");
+  const addBtn = document.getElementById("addJobItemBtn");
   const snap = await getDocs(collection(db, "jobTypes"));
-  snap.forEach(docSnap => {
-    const d = docSnap.data();
-    const normalizedDefaultPrice = toPositiveInt(d.defaultPrice, 0);
-    const opt = document.createElement("option");
-    opt.value = docSnap.id;
-    opt.textContent = `${d.description} (${normalizedDefaultPrice} )`;
-    opt.setAttribute("data-price", String(normalizedDefaultPrice));
-    jobTypeSelect.appendChild(opt);
-  });
+  const jobTypes = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 
-  jobTypeSelect.addEventListener("change", () => {
-    state.jobTypeId = jobTypeSelect.value;
-    const rawJobTypeData = snap.docs.find(d => d.id === state.jobTypeId)?.data() || null;
-    state.jobTypeData = rawJobTypeData
-      ? { ...rawJobTypeData, defaultPrice: toPositiveInt(rawJobTypeData.defaultPrice, 0) }
-      : null;
-    // Aggiorna prezzo suggerito
-    if (state.jobTypeData) {
-      priceInput.value = state.jobTypeData.defaultPrice;
-      state.price = state.jobTypeData.defaultPrice;
-    } else {
-      priceInput.value = "";
-      state.price = 0;
+  if (!Array.isArray(state.jobItems) || state.jobItems.length === 0) {
+    state.jobItems = [normalizeJobItem({ quantity: 1, price: 0, lineTotal: 0 })];
+  }
+
+  function mapOptions(selectedId) {
+    const opts = ['<option value="">-- Seleziona servizio --</option>'];
+    for (const item of jobTypes) {
+      const p = toPositiveInt(item.defaultPrice, 0);
+      const selected = item.id === selectedId ? "selected" : "";
+      opts.push(`<option value="${item.id}" ${selected}>${item.description || item.id} (${p} CHF)</option>`);
     }
-    if (state.jobTypeId) renderStepDates();
-    else hideAfter(stepJobType);
+    return opts.join("");
+  }
+
+  function syncLegacyAndNavigation() {
+    const normalized = state.jobItems.map((item) => normalizeJobItem(item));
+    state.jobItems = normalized;
+    const hasAtLeastOne = normalized.length > 0;
+    const hasIncomplete = normalized.some((item) => !item.jobTypeId);
+    const total = normalized.reduce((acc, item) => acc + item.lineTotal, 0);
+    totalNode.textContent = `Totale servizi: ${total} CHF`;
+
+    if (hasAtLeastOne && !hasIncomplete) {
+      renderStepDates();
+    } else {
+      hideAfter(stepJobType);
+    }
+  }
+
+  function renderRows() {
+    editor.innerHTML = "";
+    state.jobItems.forEach((item, idx) => {
+      const row = document.createElement("div");
+      row.className = "appointment-job-item-row";
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "1fr 100px 120px 120px auto";
+      row.style.gap = "8px";
+      row.style.marginBottom = "8px";
+      const normalized = normalizeJobItem(item);
+      row.innerHTML = `
+        <select data-idx="${idx}" data-role="jobType" required>${mapOptions(normalized.jobTypeId)}</select>
+        <input data-idx="${idx}" data-role="quantity" type="number" min="1" value="${normalized.quantity}" />
+        <input data-idx="${idx}" data-role="price" type="number" min="0" value="${normalized.price}" />
+        <input data-idx="${idx}" data-role="lineTotal" type="number" value="${normalized.lineTotal}" readonly />
+        <button data-idx="${idx}" data-role="remove" type="button" class="btn btn--danger" ${state.jobItems.length === 1 ? "disabled" : ""}>Rimuovi</button>
+      `;
+      editor.appendChild(row);
+    });
+    syncLegacyAndNavigation();
+  }
+
+  editor.addEventListener("change", (e) => {
+    const target = e.target;
+    const idx = Number.parseInt(target.dataset.idx || "-1", 10);
+    if (idx < 0 || idx >= state.jobItems.length) return;
+    const role = target.dataset.role;
+    const current = normalizeJobItem(state.jobItems[idx]);
+    if (role === "jobType") {
+      const selected = jobTypes.find((jobType) => jobType.id === target.value) || null;
+      state.jobItems[idx] = normalizeJobItem({
+        ...current,
+        jobTypeId: target.value,
+        jobTypeData: selected ? { ...selected, defaultPrice: toPositiveInt(selected.defaultPrice, 0) } : null,
+        price: selected ? toPositiveInt(selected.defaultPrice, 0) : current.price,
+      });
+    }
+    if (role === "quantity") {
+      const quantity = Math.max(1, toPositiveInt(target.value, 1));
+      state.jobItems[idx] = normalizeJobItem({ ...current, quantity });
+    }
+    if (role === "price") {
+      const price = toPositiveInt(target.value, 0);
+      state.jobItems[idx] = normalizeJobItem({ ...current, price });
+    }
+    renderRows();
   });
 
-  priceInput.addEventListener("input", () => {
-    state.price = toPositiveInt(priceInput.value, 0);
+  editor.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target.dataset.role !== "remove") return;
+    const idx = Number.parseInt(target.dataset.idx || "-1", 10);
+    if (idx < 0 || idx >= state.jobItems.length || state.jobItems.length === 1) return;
+    state.jobItems.splice(idx, 1);
+    renderRows();
   });
 
+  addBtn.addEventListener("click", () => {
+    state.jobItems.push(normalizeJobItem({ quantity: 1, price: 0, lineTotal: 0 }));
+    renderRows();
+  });
+
+  renderRows();
 }
 
 // === STEP 9: DATE/ORARI ===
@@ -1477,12 +1535,18 @@ form.addEventListener("submit", async (e) => {
   if (
     !state.location || !state.operatorId || !state.customerType ||
     !state.customerId || (state.customerType === "company" && !state.contactPersonId) ||
-    !state.vehicleId || !state.jobTypeId ||
+    !state.vehicleId || !Array.isArray(state.jobItems) || state.jobItems.length === 0 ||
     !state.dates.startReception || !state.dates.endReception ||
     !state.dates.startWork || !state.dates.endWork ||
     !state.dates.startDelivery || !state.dates.endDelivery
   ) {
     msgBox.textContent = " Compila tutti i campi obbligatori.";
+    return;
+  }
+
+  const normalizedItems = state.jobItems.map((item) => normalizeJobItem(item));
+  if (normalizedItems.some((item) => !item.jobTypeId)) {
+    msgBox.textContent = " Completa tutti i servizi prima di salvare.";
     return;
   }
 
@@ -1501,9 +1565,7 @@ form.addEventListener("submit", async (e) => {
     });
   }
 
-  const normalizedJobTypeData = state.jobTypeData
-    ? { ...state.jobTypeData, defaultPrice: toPositiveInt(state.jobTypeData.defaultPrice, 0) }
-    : null;
+  const legacyFields = buildLegacyFieldsFromJobItems(normalizedItems);
 
   const data = {
     customerId: state.customerId,
@@ -1516,9 +1578,10 @@ form.addEventListener("submit", async (e) => {
     location: state.location,
     operatorId: state.operatorId,
     operatorData: state.operatorData,
-    jobTypeId: state.jobTypeId,
-    jobTypeData: normalizedJobTypeData,
-    price: toPositiveInt(state.price, 0),
+    jobItems: legacyFields.jobItems,
+    jobTypeId: legacyFields.jobTypeId,
+    jobTypeData: legacyFields.jobTypeData,
+    price: legacyFields.price,
     noteInternal: state.noteInternal,
     status: "programmato",
     startReception: state.dates.startReception,
