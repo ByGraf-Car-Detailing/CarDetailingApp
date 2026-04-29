@@ -16,6 +16,13 @@ import { openModal } from "../utils/modal.js";
 import { resolveOperatorDisplayName } from "../services/operatorIdentity.js";
 import { getAppointmentLocations } from "../services/runtimeConfigService.js";
 import {
+  buildLegacyFieldsFromJobItems,
+  computeAppointmentPrice,
+  normalizeAppointmentJobItems,
+  normalizeJobItem,
+  toPositiveInt,
+} from "../services/jobItems.js";
+import {
   buildSortableHeaderRow,
   loadSortState,
   resolveSortUserKey,
@@ -235,7 +242,11 @@ export async function loadAppointments() {
         if (!ch.includes(chassis)) match = false;
       }
       if (operator && data.operatorId !== operator) match = false;
-      if (jobType && data.jobTypeId !== jobType) match = false;
+      if (jobType) {
+        const items = normalizeAppointmentJobItems(data);
+        const hasMatch = items.some((item) => item.jobTypeId === jobType);
+        if (!hasMatch) match = false;
+      }
       if (match) filtered.push({ id: d.id, ...data });
     }
     renderList(filtered);
@@ -386,8 +397,8 @@ export async function loadAppointments() {
         <input type="text" value="${formatCliente(data.customerData)}" readonly />
         <label>Veicolo:</label>
         <input type="text" value="${formatVeicolo(data.vehicleData)}" readonly />
-        <label>Tipo Lavoro:</label>
-        <input type="text" value="${data.jobTypeData?.description || ""}" readonly />
+        <label>Servizi:</label>
+        <div id="editJobItemsContainer"></div>
         <label>Operatore:</label>
         <input type="text" value="${formatOperatore(data, operatorDisplayById)}" readonly />
         <label>Sede:</label>
@@ -418,6 +429,49 @@ export async function loadAppointments() {
     `;
     editSection.style.display = "block";
     manageSection.style.display = "none";
+    const jobItemsContainer = editSection.querySelector("#editJobItemsContainer");
+    const jobItemsState = normalizeAppointmentJobItems(data);
+    if (jobItemsContainer) {
+      if (jobItemsState.length === 0) {
+        jobItemsState.push(normalizeJobItem({
+          jobTypeId: data.jobTypeId || "",
+          jobTypeData: data.jobTypeData || null,
+          quantity: 1,
+          price: toPositiveInt(data.price, 0),
+          lineTotal: toPositiveInt(data.price, 0),
+        }));
+      }
+      jobItemsContainer.innerHTML = `
+        ${jobItemsState.map((item, idx) => `
+          <div class="client-view-row">
+            <strong>${idx + 1}.</strong>
+            <span>${item.jobTypeData?.description || item.jobTypeId || "N/D"}</span>
+            <input type="number" data-role="qty" data-idx="${idx}" min="1" value="${item.quantity}" ${canEditAll ? "" : "readonly"} style="width:80px;margin-left:8px;" />
+            <input type="number" data-role="price" data-idx="${idx}" min="0" value="${item.price}" ${canEditAll ? "" : "readonly"} style="width:110px;margin-left:8px;" />
+            <span style="margin-left:8px;">= <span data-role="lineTotal" data-idx="${idx}">${item.lineTotal}</span> CHF</span>
+          </div>
+        `).join("")}
+        <div class="client-view-row"><strong>Totale:</strong> <span id="editJobItemsTotal">${computeAppointmentPrice(jobItemsState)} CHF</span></div>
+      `;
+      if (canEditAll) {
+        jobItemsContainer.addEventListener("input", (event) => {
+          const target = event.target;
+          const idx = Number.parseInt(target.dataset.idx || "-1", 10);
+          if (idx < 0 || idx >= jobItemsState.length) return;
+          const current = normalizeJobItem(jobItemsState[idx]);
+          if (target.dataset.role === "qty") {
+            jobItemsState[idx] = normalizeJobItem({ ...current, quantity: Math.max(1, toPositiveInt(target.value, 1)) });
+          }
+          if (target.dataset.role === "price") {
+            jobItemsState[idx] = normalizeJobItem({ ...current, price: toPositiveInt(target.value, 0) });
+          }
+          const lineTotalNode = jobItemsContainer.querySelector(`[data-role="lineTotal"][data-idx="${idx}"]`);
+          if (lineTotalNode) lineTotalNode.textContent = String(jobItemsState[idx].lineTotal);
+          const totalNode = jobItemsContainer.querySelector("#editJobItemsTotal");
+          if (totalNode) totalNode.textContent = `${computeAppointmentPrice(jobItemsState)} CHF`;
+        });
+      }
+    }
 
     // Tasto Annulla
     const cancelBtn = editSection.querySelector(".cancel-edit-btn");
@@ -476,6 +530,7 @@ export async function loadAppointments() {
           endDelivery,
           location: nextLocation,
           noteInternal: document.getElementById("editNoteInternal").value.trim(),
+          ...buildLegacyFieldsFromJobItems(jobItemsState),
           updatedAt: serverTimestamp(),
           history: [
             ...(Array.isArray(data.history) ? data.history : []),
@@ -585,6 +640,14 @@ export async function loadAppointments() {
     return `${v.brand || ""} ${v.model || ""}`.trim();
   }
 
+  function formatJobItemsDisplay(appointment) {
+    const items = normalizeAppointmentJobItems(appointment);
+    if (!items.length) return "N/D";
+    return items
+      .map((item) => `${item.jobTypeData?.description || item.jobTypeId || "N/D"} x${item.quantity} (${item.lineTotal} CHF)`)
+      .join("<br>");
+  }
+
   function showReadOnlyAppointmentModal(data) {
     const container = document.createElement("div");
     container.className = "client-view-modal";
@@ -593,7 +656,8 @@ export async function loadAppointments() {
       <div class="client-view-row"><strong>Veicolo:</strong> ${formatVeicolo(data.vehicleData) || "N/D"}</div>
       <div class="client-view-row"><strong>Targa:</strong> ${data.vehicleData?.licensePlate || "N/D"}</div>
       <div class="client-view-row"><strong>N. Telaio:</strong> ${data.vehicleData?.chassisNumber || "N/D"}</div>
-      <div class="client-view-row"><strong>Tipo lavoro:</strong> ${data.jobTypeData?.description || "N/D"}</div>
+      <div class="client-view-row"><strong>Servizi:</strong> ${formatJobItemsDisplay(data)}</div>
+      <div class="client-view-row"><strong>Totale:</strong> ${computeAppointmentPrice(normalizeAppointmentJobItems(data))} CHF</div>
       <div class="client-view-row"><strong>Operatore:</strong> ${formatOperatore(data, operatorDisplayById)}</div>
       <div class="client-view-row"><strong>Sede:</strong> ${resolveLocationDisplay(data.location)}</div>
       <div class="client-view-row"><strong>Stato:</strong> ${formatStatus(data.status || "N/D")}</div>
