@@ -541,6 +541,71 @@ td {
   color: var(--text-muted);
 }
 
+.job-items-checkbox-list {
+  display: grid;
+  gap: 8px;
+}
+
+.job-item-checkbox-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 130px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.job-item-checkbox-row.is-selected {
+  border-color: var(--gold);
+  background: rgba(201, 159, 92, 0.08);
+}
+
+.job-item-label {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.job-item-price-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-item-price-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.job-item-price-wrap input[type="number"] {
+  width: 86px;
+}
+
+@media (max-width: 640px) {
+  .job-item-checkbox-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-areas:
+      "check label"
+      "check price";
+    align-items: start;
+  }
+
+  .job-item-checkbox-row input[type="checkbox"] {
+    grid-area: check;
+    margin-top: 4px;
+  }
+
+  .job-item-label {
+    grid-area: label;
+  }
+
+  .job-item-price-wrap {
+    grid-area: price;
+  }
+}
+
 tr:last-child td {
   border-bottom: none;
 }

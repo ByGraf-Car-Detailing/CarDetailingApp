@@ -10,15 +10,14 @@ function normalizeJobItem(input, fallbackJobType = null) {
   const jobTypeData = source.jobTypeData && typeof source.jobTypeData === "object"
     ? { ...source.jobTypeData }
     : (fallbackJobType ? { ...fallbackJobType } : null);
-  const quantity = Math.max(1, toPositiveInt(source.quantity, 1));
   const price = toPositiveInt(source.price, toPositiveInt(jobTypeData?.defaultPrice, 0));
-  const lineTotal = toPositiveInt(source.lineTotal, price * quantity);
+  const lineTotal = toPositiveInt(source.lineTotal, price);
   return {
     jobTypeId,
     jobTypeData,
-    quantity,
     price,
-    lineTotal: lineTotal === price * quantity ? lineTotal : price * quantity,
+    quantity: 1,
+    lineTotal: lineTotal === price ? lineTotal : price,
   };
 }
 

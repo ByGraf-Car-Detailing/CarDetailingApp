@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import admin from "firebase-admin";
 
 const REQUIRED_CONFIRMATION = "source=prod target=staging";
+const REQUIRED_SCOPE = "schema-only";
 const PROD_PROJECT_ID = "cardetailingapp-e6c95";
 const STAGING_PROJECT_ID = "cardetailingapp-e6c95-staging";
 const COLLECTIONS = [
@@ -606,12 +607,16 @@ async function main() {
   const start = new Date().toISOString();
   const confirmation = process.env.MIRROR_CONFIRMATION || "";
   const dryRun = String(process.env.MIRROR_DRY_RUN || "false").toLowerCase() === "true";
+  const scope = String(process.env.MIRROR_SCOPE || REQUIRED_SCOPE).toLowerCase();
   const salt = process.env.MIRROR_PSEUDONYM_SALT || "";
   const { profile, collections: selectedCollections } = resolveCollectionProfile(process.env.MIRROR_COLLECTION_PROFILE || "all");
   const readBudgetDocs = parsePositiveInt("MIRROR_DOC_READ_BUDGET", process.env.MIRROR_DOC_READ_BUDGET, 20000);
 
   if (confirmation !== REQUIRED_CONFIRMATION) {
     throw new Error(`Invalid confirmation. Required exactly: '${REQUIRED_CONFIRMATION}'`);
+  }
+  if (scope !== REQUIRED_SCOPE) {
+    throw new Error(`Unsupported MIRROR_SCOPE='${scope}'. Only '${REQUIRED_SCOPE}' is allowed.`);
   }
   if (!salt || salt.length < 16) {
     throw new Error("MIRROR_PSEUDONYM_SALT missing or too short (min 16 chars)");
@@ -630,19 +635,11 @@ async function main() {
   );
 
   const prodDb = admin.firestore(prodApp);
-  const stagingDb = admin.firestore(stagingApp);
-  const prodAuth = admin.auth(prodApp);
-  const stagingAuth = admin.auth(stagingApp);
 
   const artifactsDir = process.env.MIRROR_ARTIFACTS_DIR || "artifacts/mirror";
   fs.mkdirSync(artifactsDir, { recursive: true });
   const summaryPath = path.join(artifactsDir, "summary.json");
   const manifestPath = path.join(artifactsDir, "manifest.json");
-  const prodSnapshotPath = path.join(artifactsDir, "prod-export-raw.json");
-  const sanitizedSnapshotPath = path.join(artifactsDir, "prod-export-sanitized.json");
-  const stagingBackupPath = path.join(artifactsDir, "staging-backup-pre-refresh.json");
-  const stagingPostPath = path.join(artifactsDir, "staging-post-import.json");
-
   const estimatedDocCounts = await estimateCollectionDocCounts(prodDb, selectedCollections);
   const estimatedTotalDocs = Object.values(estimatedDocCounts).reduce((acc, n) => acc + n, 0);
   const estimatedReadCost = Math.ceil(estimatedTotalDocs * (INCLUDE_SUBCOLLECTIONS ? 1.2 : 1.0));
@@ -663,48 +660,11 @@ async function main() {
     );
   }
 
-  console.log("[mirror] exporting prod firestore...");
-  const prodRaw = await exportDataset(prodDb, selectedCollections);
-  const prodUsers = await listAllUsers(prodAuth);
-
-  console.log("[mirror] sanitizing dataset...");
-  const sanitized = sanitizeDataset(prodRaw, salt);
-  const sanitizedManifest = buildDatasetManifest(sanitized);
-
-  const forbiddenDomains = collectProdDomains(prodRaw, prodUsers);
-  const piiFindingsPre = scanSanitizedDocsForPii(sanitized, forbiddenDomains);
-  if (piiFindingsPre.length > 0) {
-    writeJson(path.join(artifactsDir, "pii-findings-pre.json"), piiFindingsPre.slice(0, 500));
-    throw new Error(`PII scan failed on sanitized payload (pre-import), findings=${piiFindingsPre.length}`);
-  }
-
-  const riIssuesPre = checkReferentialIntegrity(sanitized);
-  if (riIssuesPre.length > 0) {
-    writeJson(path.join(artifactsDir, "ri-issues-pre.json"), riIssuesPre.slice(0, 500));
-    throw new Error(`Referential integrity failed on sanitized payload (pre-import), issues=${riIssuesPre.length}`);
-  }
-
-  console.log("[mirror] creating staging backups (firestore + auth)...");
-  const stagingBackup = await exportDataset(stagingDb, selectedCollections);
-  const stagingAuthBackupRecords = await listAllUsers(stagingAuth);
-  const stagingAuthBackup = stagingAuthBackupRecords.map((u) => ({
-    uid: u.uid,
-    email: u.email,
-    displayName: u.displayName,
-    phoneNumber: u.phoneNumber,
-    disabled: u.disabled,
-    emailVerified: u.emailVerified,
-    customClaims: u.customClaims || {},
-  }));
-
-  writeJson(prodSnapshotPath, prodRaw.map((d) => ({ path: d.path, data: toSerializable(d.data) })));
-  writeJson(sanitizedSnapshotPath, sanitized.map((d) => ({ path: d.path, data: toSerializable(d.data) })));
-  writeJson(stagingBackupPath, stagingBackup.map((d) => ({ path: d.path, data: toSerializable(d.data) })));
-  writeJson(path.join(artifactsDir, "staging-auth-backup.json"), stagingAuthBackup);
-
   const summary = {
     startedAt: start,
     dryRun,
+    effectiveScope: REQUIRED_SCOPE,
+    writes_blocked: true,
     sourceProject: PROD_PROJECT_ID,
     targetProject: STAGING_PROJECT_ID,
     firestore: {
@@ -713,118 +673,26 @@ async function main() {
       readBudgetDocs,
       estimatedDocCounts,
       estimatedReadCost,
-      prodCounts: countDocsByTopCollection(prodRaw),
-      sanitizedCounts: countDocsByTopCollection(sanitized),
-      sanitizedManifestSha256: sanitizedManifest.datasetSha256,
+      writesAttempted: 0,
+      writesApplied: 0,
     },
     auth: {
-      prodUsers: prodUsers.length,
-      stagingUsersBefore: stagingAuthBackup.length,
+      writesAttempted: 0,
+      writesApplied: 0,
     },
-    status: "started",
+    status: "schema-only-blocked-writes",
   };
 
-  if (dryRun) {
-    writeJson(manifestPath, { sanitizedManifest });
-    summary.status = "dry-run-success";
-    writeJson(summaryPath, summary);
-    console.log("[mirror] dry run complete");
-    return;
-  }
-
-  let firestoreWiped = false;
-  let authChanged = false;
-  try {
-    console.log("[mirror] wiping staging firestore collections...");
-    await wipeCollections(stagingDb, selectedCollections);
-    firestoreWiped = true;
-
-    console.log("[mirror] importing sanitized dataset into staging...");
-    await importDataset(stagingDb, sanitized);
-
-    console.log("[mirror] syncing auth users prod -> staging...");
-    const authStats = await syncAuthUsers(prodAuth, stagingAuth, salt);
-    authChanged = true;
-
-    console.log("[mirror] post-import verification...");
-    const stagingPost = await exportDataset(stagingDb, selectedCollections);
-    const stagingPostManifest = buildDatasetManifest(stagingPost);
-    writeJson(stagingPostPath, stagingPost.map((d) => ({ path: d.path, data: toSerializable(d.data) })));
-
-    const piiFindingsPost = scanSanitizedDocsForPii(stagingPost, forbiddenDomains);
-    if (piiFindingsPost.length > 0) {
-      writeJson(path.join(artifactsDir, "pii-findings-post.json"), piiFindingsPost.slice(0, 500));
-      throw new Error(`PII scan failed on staging post-import, findings=${piiFindingsPost.length}`);
-    }
-
-    const riIssuesPost = checkReferentialIntegrity(stagingPost);
-    if (riIssuesPost.length > 0) {
-      writeJson(path.join(artifactsDir, "ri-issues-post.json"), riIssuesPost.slice(0, 500));
-      throw new Error(`Referential integrity failed on staging post-import, issues=${riIssuesPost.length}`);
-    }
-
-    if (stagingPostManifest.totalDocs !== sanitizedManifest.totalDocs) {
-      throw new Error(
-        `Post-import doc count mismatch: staging=${stagingPostManifest.totalDocs}, sanitized=${sanitizedManifest.totalDocs}`
-      );
-    }
-
-    if (stagingPostManifest.datasetSha256 !== sanitizedManifest.datasetSha256) {
-      throw new Error(
-        `Post-import manifest hash mismatch: staging=${stagingPostManifest.datasetSha256}, sanitized=${sanitizedManifest.datasetSha256}`
-      );
-    }
-
-    writeJson(manifestPath, {
-      sanitizedManifest,
-      stagingPostManifest,
-      manifestMatch: true,
-    });
-
-    summary.firestore.stagingCountsAfter = countDocsByTopCollection(stagingPost);
-    summary.firestore.stagingManifestSha256 = stagingPostManifest.datasetSha256;
-    summary.auth = {
-      ...summary.auth,
-      ...authStats,
-      stagingUsersAfter: (await listAllUsers(stagingAuth)).length,
-    };
-    summary.status = "success";
-    summary.finishedAt = new Date().toISOString();
-    writeJson(summaryPath, summary);
-    console.log("[mirror] success");
-  } catch (err) {
-    summary.status = "failed";
-    summary.error = String(err?.message || err);
-    summary.failedAt = new Date().toISOString();
-    writeJson(summaryPath, summary);
-
-    console.error("[mirror] failed, starting rollback...", err?.message || err);
-    try {
-      if (firestoreWiped) {
-        await wipeCollections(stagingDb, selectedCollections);
-      }
-      await importDataset(stagingDb, stagingBackup);
-      if (authChanged) {
-        await restoreAuthBackup(stagingAuth, stagingAuthBackup);
-      }
-      writeJson(path.join(artifactsDir, "rollback-status.json"), {
-        status: "rollback-success",
-        at: new Date().toISOString(),
-      });
-    } catch (rollbackErr) {
-      writeJson(path.join(artifactsDir, "rollback-status.json"), {
-        status: "rollback-failed",
-        at: new Date().toISOString(),
-        error: String(rollbackErr?.message || rollbackErr),
-      });
-    }
-    throw err;
-  } finally {
-    await Promise.allSettled([
-      prodApp.delete(),
-      stagingApp.delete(),
-    ]);
-  }
+  writeJson(manifestPath, {
+    mode: REQUIRED_SCOPE,
+    collections: selectedCollections,
+    writes_blocked: true,
+    scope_guard: "document-mirroring-disabled",
+    note: "Business document sync from prod to staging is blocked by policy.",
+  });
+  writeJson(summaryPath, summary);
+  await Promise.allSettled([prodApp.delete(), stagingApp.delete()]);
+  console.log("[mirror] completed in schema-only mode (writes blocked)");
 }
 
 main().catch((err) => {

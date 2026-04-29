@@ -436,7 +436,6 @@ export async function loadAppointments() {
         jobItemsState.push(normalizeJobItem({
           jobTypeId: data.jobTypeId || "",
           jobTypeData: data.jobTypeData || null,
-          quantity: 1,
           price: toPositiveInt(data.price, 0),
           lineTotal: toPositiveInt(data.price, 0),
         }));
@@ -446,7 +445,6 @@ export async function loadAppointments() {
           <div class="client-view-row">
             <strong>${idx + 1}.</strong>
             <span>${item.jobTypeData?.description || item.jobTypeId || "N/D"}</span>
-            <input type="number" data-role="qty" data-idx="${idx}" min="1" value="${item.quantity}" ${canEditAll ? "" : "readonly"} style="width:80px;margin-left:8px;" />
             <input type="number" data-role="price" data-idx="${idx}" min="0" value="${item.price}" ${canEditAll ? "" : "readonly"} style="width:110px;margin-left:8px;" />
             <span style="margin-left:8px;">= <span data-role="lineTotal" data-idx="${idx}">${item.lineTotal}</span> CHF</span>
           </div>
@@ -459,9 +457,6 @@ export async function loadAppointments() {
           const idx = Number.parseInt(target.dataset.idx || "-1", 10);
           if (idx < 0 || idx >= jobItemsState.length) return;
           const current = normalizeJobItem(jobItemsState[idx]);
-          if (target.dataset.role === "qty") {
-            jobItemsState[idx] = normalizeJobItem({ ...current, quantity: Math.max(1, toPositiveInt(target.value, 1)) });
-          }
           if (target.dataset.role === "price") {
             jobItemsState[idx] = normalizeJobItem({ ...current, price: toPositiveInt(target.value, 0) });
           }
@@ -644,7 +639,7 @@ export async function loadAppointments() {
     const items = normalizeAppointmentJobItems(appointment);
     if (!items.length) return "N/D";
     return items
-      .map((item) => `${item.jobTypeData?.description || item.jobTypeId || "N/D"} x${item.quantity} (${item.lineTotal} CHF)`)
+      .map((item) => `${item.jobTypeData?.description || item.jobTypeId || "N/D"} (${item.lineTotal} CHF)`)
       .join("<br>");
   }
 
