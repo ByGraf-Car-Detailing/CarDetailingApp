@@ -65,12 +65,8 @@ export async function loadClients() {
 
   const q = query(collection(db, "clients"));
   const snap = await getDocs(q);
-
-  const clients = [];
-  for (const d of snap.docs) {
-    const data = d.data();
-    clients.push({ id: d.id, ...data });
-  }
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const clients = await filterClients(docs, { includeInactive: false });
   renderList(clients);
 }
 
@@ -86,40 +82,14 @@ searchBtn.addEventListener("click", async () => {
 
   const q = query(collection(db, "clients"));
   const snap = await getDocs(q);
-
-  const results = [];
-  for (const d of snap.docs) {
-    const data = d.data();
-    let match = true;
-
-    if (!includeInactive && data.active === false) match = false;
-
-    if (data.type === "person") {
-      if (match && fname && !(data.firstName || "").toLowerCase().includes(fname)) match = false;
-      if (match && lname && !(data.lastName || "").toLowerCase().includes(lname)) match = false;
-    }
-
-    if (match && email && !(data.email || "").toLowerCase().includes(email)) match = false;
-
-    if (match && companyNameFilter) {
-      if (data.type === "company") {
-        if (!(data.companyName || "").toLowerCase().includes(companyNameFilter)) match = false;
-      } else if (data.isContact && data.companyId) {
-        const ref = doc(db, "clients", data.companyId);
-        const s = await getDoc(ref);
-        if (s.exists()) {
-          const cname = s.data().companyName || "";
-          if (!cname.toLowerCase().includes(companyNameFilter)) match = false;
-        } else {
-          match = false;
-        }
-      } else {
-        match = false;
-      }
-    }
-
-    if (match) results.push({ id: d.id, ...data });
-  }
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const results = await filterClients(docs, {
+    includeInactive,
+    fname,
+    lname,
+    email,
+    companyNameFilter,
+  });
 
   renderList(results);
 });
@@ -325,6 +295,50 @@ async function showClientViewModal(clientId) {
 
 function sanitizePhone(phone) {
   return String(phone || "").replace(/[^\d+]/g, "");
+}
+
+async function filterClients(docs, options = {}) {
+  const {
+    includeInactive = false,
+    fname = "",
+    lname = "",
+    email = "",
+    companyNameFilter = "",
+  } = options;
+
+  const results = [];
+  for (const data of docs) {
+    let match = true;
+
+    if (!includeInactive && data.active === false) match = false;
+
+    if (data.type === "person") {
+      if (match && fname && !(data.firstName || "").toLowerCase().includes(fname)) match = false;
+      if (match && lname && !(data.lastName || "").toLowerCase().includes(lname)) match = false;
+    }
+
+    if (match && email && !(data.email || "").toLowerCase().includes(email)) match = false;
+
+    if (match && companyNameFilter) {
+      if (data.type === "company") {
+        if (!(data.companyName || "").toLowerCase().includes(companyNameFilter)) match = false;
+      } else if (data.isContact && data.companyId) {
+        const ref = doc(db, "clients", data.companyId);
+        const s = await getDoc(ref);
+        if (s.exists()) {
+          const cname = s.data().companyName || "";
+          if (!cname.toLowerCase().includes(companyNameFilter)) match = false;
+        } else {
+          match = false;
+        }
+      } else {
+        match = false;
+      }
+    }
+
+    if (match) results.push(data);
+  }
+  return results;
 }
 
 export { renderList };
