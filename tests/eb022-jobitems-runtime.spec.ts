@@ -64,8 +64,8 @@ test("EB-022: jobItems multi-service + fallback legacy in gestione appuntamenti"
       operatorId: "admin@test.local",
       operatorData: { operatorId: "admin@test.local", displayName: "Admin" },
       jobItems: [
-        { jobTypeId: jobTypeARef.id, jobTypeData: { description: "Lavaggio Premium", defaultPrice: 100 }, quantity: 1, price: 100, lineTotal: 100 },
-        { jobTypeId: jobTypeBRef.id, jobTypeData: { description: "Interni Dettaglio", defaultPrice: 80 }, quantity: 2, price: 80, lineTotal: 160 },
+        { jobTypeId: jobTypeARef.id, jobTypeData: { description: "Lavaggio Premium", defaultPrice: 100 }, price: 100, lineTotal: 100 },
+        { jobTypeId: jobTypeBRef.id, jobTypeData: { description: "Interni Dettaglio", defaultPrice: 80 }, price: 160, lineTotal: 160 },
       ],
       jobTypeId: jobTypeARef.id,
       jobTypeData: { description: "Lavaggio Premium", defaultPrice: 100 },

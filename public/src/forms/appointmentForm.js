@@ -1308,42 +1308,29 @@ function renderStepVehicleCard() {
 async function renderStepJobType() {
   stepJobType.innerHTML = `
     <label>Servizi:</label>
-    <div id="jobItemsEditor"></div>
-    <div class="form-actions" style="justify-content:flex-start;">
-      <button type="button" id="addJobItemBtn" class="btn btn--ghost">Aggiungi servizio</button>
-    </div>
-    <div id="jobItemsTotal" class="text-muted"></div>
+    <div id="jobItemsEditor" class="job-items-checkbox-list"></div>
   `;
   stepJobType.style.display = "block";
   const editor = document.getElementById("jobItemsEditor");
-  const totalNode = document.getElementById("jobItemsTotal");
-  const addBtn = document.getElementById("addJobItemBtn");
   const snap = await getDocs(collection(db, "jobTypes"));
-  const jobTypes = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  const jobTypes = snap.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .sort((a, b) => (a.description || a.id).localeCompare(b.description || b.id, "it"));
 
-  if (!Array.isArray(state.jobItems) || state.jobItems.length === 0) {
-    state.jobItems = [normalizeJobItem({ quantity: 1, price: 0, lineTotal: 0 })];
-  }
-
-  function mapOptions(selectedId) {
-    const opts = ['<option value="">-- Seleziona servizio --</option>'];
-    for (const item of jobTypes) {
-      const p = toPositiveInt(item.defaultPrice, 0);
-      const selected = item.id === selectedId ? "selected" : "";
-      opts.push(`<option value="${item.id}" ${selected}>${item.description || item.id} (${p} CHF)</option>`);
+  const selectedById = new Map();
+  if (Array.isArray(state.jobItems)) {
+    for (const item of state.jobItems) {
+      const normalized = normalizeJobItem(item);
+      if (!normalized.jobTypeId) continue;
+      selectedById.set(normalized.jobTypeId, normalized);
     }
-    return opts.join("");
   }
 
   function syncLegacyAndNavigation() {
     const normalized = state.jobItems.map((item) => normalizeJobItem(item));
     state.jobItems = normalized;
     const hasAtLeastOne = normalized.length > 0;
-    const hasIncomplete = normalized.some((item) => !item.jobTypeId);
-    const total = normalized.reduce((acc, item) => acc + item.lineTotal, 0);
-    totalNode.textContent = `Totale servizi: ${total} CHF`;
-
-    if (hasAtLeastOne && !hasIncomplete) {
+    if (hasAtLeastOne) {
       renderStepDates();
     } else {
       hideAfter(stepJobType);
@@ -1351,67 +1338,89 @@ async function renderStepJobType() {
   }
 
   function renderRows() {
-    editor.innerHTML = "";
-    state.jobItems.forEach((item, idx) => {
-      const row = document.createElement("div");
-      row.className = "appointment-job-item-row";
-      row.style.display = "grid";
-      row.style.gridTemplateColumns = "1fr 100px 120px 120px auto";
-      row.style.gap = "8px";
-      row.style.marginBottom = "8px";
-      const normalized = normalizeJobItem(item);
-      row.innerHTML = `
-        <select data-idx="${idx}" data-role="jobType" required>${mapOptions(normalized.jobTypeId)}</select>
-        <input data-idx="${idx}" data-role="quantity" type="number" min="1" value="${normalized.quantity}" />
-        <input data-idx="${idx}" data-role="price" type="number" min="0" value="${normalized.price}" />
-        <input data-idx="${idx}" data-role="lineTotal" type="number" value="${normalized.lineTotal}" readonly />
-        <button data-idx="${idx}" data-role="remove" type="button" class="btn btn--danger" ${state.jobItems.length === 1 ? "disabled" : ""}>Rimuovi</button>
-      `;
-      editor.appendChild(row);
-    });
+    editor.innerHTML = jobTypes
+      .map((jobType) => {
+        const selected = selectedById.get(jobType.id) || null;
+        const checked = selected ? "checked" : "";
+        const defaultPrice = toPositiveInt(jobType.defaultPrice, 0);
+        const priceValue = selected ? selected.price : defaultPrice;
+        const rowClass = selected ? "job-item-checkbox-row is-selected" : "job-item-checkbox-row";
+        return `
+          <label class="${rowClass}" data-jobtype-id="${jobType.id}">
+            <input type="checkbox" data-role="select-service" data-jobtype-id="${jobType.id}" ${checked} />
+            <span class="job-item-label">${jobType.description || jobType.id}</span>
+            <div class="job-item-price-wrap">
+              <span class="job-item-price-tag">CHF</span>
+              <input
+                data-role="price"
+                data-jobtype-id="${jobType.id}"
+                type="number"
+                min="0"
+                step="1"
+                value="${priceValue}"
+                ${selected ? "" : "disabled"}
+              />
+            </div>
+          </label>
+        `;
+      })
+      .join("");
     syncLegacyAndNavigation();
   }
 
-  editor.addEventListener("change", (e) => {
-    const target = e.target;
-    const idx = Number.parseInt(target.dataset.idx || "-1", 10);
-    if (idx < 0 || idx >= state.jobItems.length) return;
-    const role = target.dataset.role;
-    const current = normalizeJobItem(state.jobItems[idx]);
-    if (role === "jobType") {
-      const selected = jobTypes.find((jobType) => jobType.id === target.value) || null;
-      state.jobItems[idx] = normalizeJobItem({
-        ...current,
-        jobTypeId: target.value,
-        jobTypeData: selected ? { ...selected, defaultPrice: toPositiveInt(selected.defaultPrice, 0) } : null,
-        price: selected ? toPositiveInt(selected.defaultPrice, 0) : current.price,
-      });
+  editor.addEventListener("change", (event) => {
+    const target = event.target;
+    const role = target.dataset.role || "";
+    const jobTypeId = target.dataset.jobtypeId || "";
+    const jobType = jobTypes.find((item) => item.id === jobTypeId) || null;
+    if (!jobType) return;
+
+    if (role === "select-service") {
+      if (target.checked) {
+        const existing = selectedById.get(jobTypeId);
+        const price = existing?.price ?? toPositiveInt(jobType.defaultPrice, 0);
+        selectedById.set(
+          jobTypeId,
+          normalizeJobItem({
+            jobTypeId,
+            jobTypeData: { ...jobType, defaultPrice: toPositiveInt(jobType.defaultPrice, 0) },
+            price,
+            lineTotal: price,
+          })
+        );
+      } else {
+        selectedById.delete(jobTypeId);
+      }
+      state.jobItems = jobTypes
+        .map((item) => selectedById.get(item.id))
+        .filter(Boolean)
+        .map((item) => normalizeJobItem(item));
+      renderRows();
+      return;
     }
-    if (role === "quantity") {
-      const quantity = Math.max(1, toPositiveInt(target.value, 1));
-      state.jobItems[idx] = normalizeJobItem({ ...current, quantity });
-    }
+
     if (role === "price") {
       const price = toPositiveInt(target.value, 0);
-      state.jobItems[idx] = normalizeJobItem({ ...current, price });
+      const existing = selectedById.get(jobTypeId);
+      if (!existing) return;
+      const updated = normalizeJobItem({
+        ...existing,
+        price,
+        lineTotal: price,
+      });
+      selectedById.set(jobTypeId, updated);
+      state.jobItems = jobTypes
+        .map((item) => selectedById.get(item.id))
+        .filter(Boolean)
+        .map((item) => normalizeJobItem(item));
+      syncLegacyAndNavigation();
     }
-    renderRows();
   });
 
-  editor.addEventListener("click", (e) => {
-    const target = e.target;
-    if (target.dataset.role !== "remove") return;
-    const idx = Number.parseInt(target.dataset.idx || "-1", 10);
-    if (idx < 0 || idx >= state.jobItems.length || state.jobItems.length === 1) return;
-    state.jobItems.splice(idx, 1);
-    renderRows();
-  });
-
-  addBtn.addEventListener("click", () => {
-    state.jobItems.push(normalizeJobItem({ quantity: 1, price: 0, lineTotal: 0 }));
-    renderRows();
-  });
-
+  state.jobItems = jobTypes
+    .map((item) => selectedById.get(item.id))
+    .filter(Boolean)
+    .map((item) => normalizeJobItem(item));
   renderRows();
 }
 

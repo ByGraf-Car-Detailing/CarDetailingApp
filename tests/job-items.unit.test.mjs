@@ -8,14 +8,15 @@ import {
 describe("jobItems helper", () => {
   it("calcola lineTotal e totale legacy da piu item", () => {
     const items = [
-      normalizeJobItem({ jobTypeId: "a", jobTypeData: { description: "A" }, quantity: 2, price: 50 }),
-      normalizeJobItem({ jobTypeId: "b", jobTypeData: { description: "B" }, quantity: 1, price: 30 }),
+      normalizeJobItem({ jobTypeId: "a", jobTypeData: { description: "A" }, price: 50 }),
+      normalizeJobItem({ jobTypeId: "b", jobTypeData: { description: "B" }, price: 30 }),
     ];
     const legacy = buildLegacyFieldsFromJobItems(items);
-    expect(legacy.price).toBe(130);
+    expect(legacy.price).toBe(80);
     expect(legacy.jobTypeId).toBe("a");
     expect(legacy.jobTypeData?.description).toBe("A");
     expect(legacy.jobItems).toHaveLength(2);
+    expect(legacy.jobItems[0].quantity).toBe(1);
   });
 
   it("fallback legacy -> jobItems singolo", () => {
