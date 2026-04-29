@@ -60,5 +60,8 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_PROD: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
         run: npm run check:auth:contract
 
+      - name: Unit contract gate (jobItems)
+        run: npm run test:unit
+
       - name: Emulator E2E baseline
         run: npm run test:emu
