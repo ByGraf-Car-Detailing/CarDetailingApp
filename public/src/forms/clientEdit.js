@@ -66,6 +66,13 @@ export async function loadClientForEdit(clientId) {
 
   const html = `
     <input type="hidden" id="editClientId" value="${clientId}" />
+    ${disabled ? `
+      <label>
+        <input type="checkbox" id="editReactivateClient" />
+        Riattiva cliente
+      </label>
+      <small style="display:block;margin-bottom:8px;">Per clienti disattivati e consentita solo la riattivazione.</small>
+    ` : ""}
 
     ${isPerson ? `
       <label>Nome:</label>
@@ -109,7 +116,7 @@ export async function loadClientForEdit(clientId) {
 
     <div class="form-actions">
       <button type="button" id="cancelEditBtn" class="btn btn--ghost">Annulla</button>
-      <button type="submit" class="btn btn--primary" ${disabledAttr}>Salva</button>
+      <button type="submit" class="btn btn--primary">${disabled ? "Riattiva" : "Salva"}</button>
     </div>
   `;
 
@@ -173,7 +180,21 @@ export async function loadClientForEdit(clientId) {
   editForm.onsubmit = async (e) => {
     e.preventDefault();
     if (disabled) {
-      alert("Cliente disattivato. Non  possibile salvare.");
+      const reactivate = document.getElementById("editReactivateClient");
+      if (!reactivate || !reactivate.checked) {
+        alert("Seleziona 'Riattiva cliente' per procedere.");
+        return;
+      }
+      try {
+        await updateDoc(ref, { active: true });
+        alert("Cliente riattivato.");
+        document.getElementById("clientEditSection").style.display = "none";
+        document.getElementById("clientManageSection").style.display = "block";
+        import("./clientManage.js").then(m => m.loadClients());
+      } catch (err) {
+        console.error("Errore riattivazione:", err.message);
+        alert("Errore durante la riattivazione.");
+      }
       return;
     }
 
