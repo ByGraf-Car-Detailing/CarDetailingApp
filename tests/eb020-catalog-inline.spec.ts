@@ -124,6 +124,12 @@ test("EB-020: duplicate make custom disattivata viene riattivata e selezionata",
       vehicleType: "car",
       updatedAt: new Date().toISOString(),
     }, { merge: true });
+    await fs.setDoc(fs.doc(db, "vehicleModels", "DR_5_0"), {
+      make: "dr",
+      name: "5.0",
+      source: "manual",
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
   }, { makeName });
 
   await page.getByTestId("dash-gestione-veicoli").click();
@@ -144,6 +150,8 @@ test("EB-020: duplicate make custom disattivata viene riattivata e selezionata",
   await page.selectOption("#makeSelect", "__ADD_MAKE__");
   await expect(page.locator("#makeSelect")).toHaveValue(makeName);
   await expect(page.locator("#vehicleFormMsg")).toContainText("selezionata", { timeout: 15000 });
+  await expect(page.locator("#modelSelect")).toContainText("5.0");
+  await expect(page.locator("#modelSelectErrorMsg")).toHaveCount(0);
 
   const stored = await page.evaluate(async () => {
     const fs = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");

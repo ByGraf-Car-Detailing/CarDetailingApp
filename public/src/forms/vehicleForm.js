@@ -80,6 +80,27 @@ function normalizeOptionalName(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
+function normalizeLookupKey(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 100);
+}
+
+function buildMakeVariants(make) {
+  const raw = String(make || "").trim().replace(/\s+/g, " ");
+  if (!raw) return [];
+  const title = raw
+    .split(" ")
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(" ");
+  return Array.from(new Set([raw, raw.toUpperCase(), raw.toLowerCase(), title]));
+}
+
 function addInlineOption(selectNode, optionValue, label) {
   if (!selectNode) return;
   const exists = Array.from(selectNode.options || []).some((o) => o.value === optionValue);
@@ -597,15 +618,31 @@ export async function loadModels(make, targetSelect) {
   targetSelect.innerHTML = '<option value="">-- Seleziona modello --</option>';
 
   try {
-    // Legge modelli da Firestore filtrati per marca
-    const q = query(collection(db, "vehicleModels"), where("make", "==", make));
-    const snap = await getDocs(q);
-    
-    const models = [];
-    snap.forEach(doc => {
-      const name = doc.data().name;
-      if (name) models.push(name);
-    });
+    // Case-insensitive/legacy-safe lookup:
+    // some historical docs have different casing in `make` (e.g. "dr" vs "DR").
+    const variants = buildMakeVariants(make);
+    const byDocId = new Map();
+    const byModelName = new Map();
+
+    const makeQueries = variants.map((v) => getDocs(query(collection(db, "vehicleModels"), where("make", "==", v))));
+    const makeIdKey = normalizeLookupKey(make);
+    const makeIdQuery = makeIdKey
+      ? getDocs(query(collection(db, "vehicleModels"), where("makeId", "==", makeIdKey)))
+      : null;
+    const queryResults = await Promise.all(makeIdQuery ? [...makeQueries, makeIdQuery] : makeQueries);
+
+    for (const snap of queryResults) {
+      snap.forEach((docSnap) => {
+        if (byDocId.has(docSnap.id)) return;
+        byDocId.set(docSnap.id, true);
+        const row = docSnap.data() || {};
+        const name = normalizeOptionalName(row.name);
+        if (!name) return;
+        const modelKey = name.toLowerCase();
+        if (!byModelName.has(modelKey)) byModelName.set(modelKey, name);
+      });
+    }
+    const models = Array.from(byModelName.values());
     
     // Ordina alfabeticamente
     models.sort((a, b) => a.localeCompare(b));
