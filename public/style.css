@@ -1175,6 +1175,23 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   border-color: var(--gold);
 }
 
+.inline-catalog-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btn--sm {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+#inlineMakeFeedback,
+#inlineModelFeedback {
+  margin-top: 8px;
+}
+
 @media (max-width: 767px) {
   .inline-add-btn {
     display: block;
@@ -1183,6 +1200,10 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     margin-top: 8px;
     text-align: center;
     padding: 10px;
+  }
+
+  .inline-catalog-actions .btn {
+    width: 100%;
   }
 }
 
