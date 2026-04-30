@@ -49,123 +49,121 @@ const backToListBtn = document.getElementById("backToListVehicleBtn");
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
+const ADD_MAKE_VALUE = "__ADD_MAKE__";
+const ADD_MODEL_VALUE = "__ADD_MODEL__";
 
 function roleForCatalogInline() {
   return localStorage.getItem("userRole") || "user";
-}
-
-function showInlineFeedback(target, message, kind = "error") {
-  if (!target) return;
-  target.className = "form-msg";
-  if (kind === "success") target.classList.add("form-msg--success");
-  if (kind === "error") target.classList.add("form-msg--error");
-  target.textContent = message;
-  target.style.display = message ? "block" : "none";
-}
-
-function clearInlineFeedback(root = document) {
-  showInlineFeedback(root.querySelector("#inlineMakeFeedback"), "");
-  showInlineFeedback(root.querySelector("#inlineModelFeedback"), "");
 }
 
 function isStatusOk(status) {
   return status === "OK";
 }
 
-function isStatusKnownError(status) {
-  return status === "DUPLICATE" || status === "COLLISION" || status === "INVALID_INPUT" || status === "UNAUTHORIZED";
+function isStatusDuplicate(status) {
+  return status === "DUPLICATE";
 }
 
-function bindInlineCatalogActions({
-  root = document,
+function showCatalogMessage(message, kind = "error") {
+  if (!msgBox) return;
+  msgBox.className = kind === "success" ? "form-msg form-msg--success" : "form-msg form-msg--error";
+  msgBox.textContent = message;
+}
+
+function clearCatalogMessage() {
+  if (!msgBox) return;
+  msgBox.className = "";
+  msgBox.textContent = "";
+}
+
+function normalizeOptionalName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function addInlineOption(selectNode, optionValue, label) {
+  if (!selectNode) return;
+  const exists = Array.from(selectNode.options || []).some((o) => o.value === optionValue);
+  if (exists) return;
+  const opt = document.createElement("option");
+  opt.value = optionValue;
+  opt.textContent = label;
+  selectNode.appendChild(opt);
+}
+
+async function addMakeFromDropdown({
   makeSelectNode,
   modelSelectNode,
   vehicleTypeNode,
-  onModelRefresh,
+  onAfterSelectMake,
 }) {
-  const makeBtn = root.querySelector("#inlineAddMakeBtn");
-  const modelBtn = root.querySelector("#inlineAddModelBtn");
-  const makeFeedback = root.querySelector("#inlineMakeFeedback");
-  const modelFeedback = root.querySelector("#inlineModelFeedback");
-
-  if (!makeBtn || !modelBtn || !makeSelectNode || !modelSelectNode || !vehicleTypeNode) return;
-
-  const syncModelBtn = () => {
-    modelBtn.disabled = !makeSelectNode.value;
-  };
-  syncModelBtn();
-
-  makeSelectNode.addEventListener("change", syncModelBtn);
-
-  makeBtn.addEventListener("click", async () => {
-    clearInlineFeedback(root);
-    const inputName = window.prompt("Inserisci la nuova marca:");
-    if (inputName === null) return;
-    const role = roleForCatalogInline();
-    makeBtn.disabled = true;
-    modelBtn.disabled = true;
-    try {
-      const result = await addInlineMake({
-        name: inputName,
-        vehicleType: resolveInlineVehicleType(vehicleTypeNode.value),
-        role,
-      });
-      makeBtn.disabled = false;
-      syncModelBtn();
-
-      if (isStatusOk(result.status)) {
-        await loadMakes(makeSelectNode, { includeName: result.makeName });
-        makeSelectNode.value = result.makeName;
-        syncModelBtn();
-        if (typeof onModelRefresh === "function") await onModelRefresh(result.makeName);
-        showInlineFeedback(makeFeedback, result.message, "success");
-        return;
-      }
-
-      const kind = isStatusKnownError(result.status) ? "error" : "error";
-      showInlineFeedback(makeFeedback, result.message || "Errore aggiunta marca.", kind);
-    } catch (error) {
-      makeBtn.disabled = false;
-      syncModelBtn();
-      showInlineFeedback(makeFeedback, `Errore aggiunta marca: ${error?.message || String(error)}`);
-    }
-  });
-
-  modelBtn.addEventListener("click", async () => {
-    clearInlineFeedback(root);
-    if (!makeSelectNode.value) {
-      showInlineFeedback(modelFeedback, "Seleziona prima una marca.");
+  const inputName = window.prompt("Inserisci la nuova marca:");
+  if (inputName === null) {
+    makeSelectNode.value = "";
+    return;
+  }
+  const role = roleForCatalogInline();
+  try {
+    const result = await addInlineMake({
+      name: inputName,
+      vehicleType: resolveInlineVehicleType(vehicleTypeNode.value),
+      role,
+    });
+    if (isStatusOk(result.status) || isStatusDuplicate(result.status)) {
+      await loadMakes(makeSelectNode, { includeName: result.makeName });
+      makeSelectNode.value = result.makeName;
+      if (typeof onAfterSelectMake === "function") await onAfterSelectMake(result.makeName);
+      const msg = isStatusDuplicate(result.status)
+        ? "Marca gia presente: selezionata dal catalogo."
+        : "Marca aggiunta e selezionata.";
+      showCatalogMessage(msg, "success");
       return;
     }
-    const inputModel = window.prompt("Inserisci il nuovo modello:");
-    if (inputModel === null) return;
-    const role = roleForCatalogInline();
+    makeSelectNode.value = "";
+    showCatalogMessage(result.message || "Errore aggiunta marca.");
+  } catch (error) {
+    makeSelectNode.value = "";
+    showCatalogMessage(`Errore aggiunta marca: ${error?.message || String(error)}`);
+  }
+}
 
-    makeBtn.disabled = true;
-    modelBtn.disabled = true;
-    try {
-      const result = await addInlineModel({
-        makeName: makeSelectNode.value,
-        modelName: inputModel,
-        vehicleType: resolveInlineVehicleType(vehicleTypeNode.value),
-        role,
-      });
-      makeBtn.disabled = false;
-      modelBtn.disabled = false;
-
-      if (isStatusOk(result.status)) {
-        await loadModels(makeSelectNode.value, modelSelectNode, { includeName: result.modelName });
-        modelSelectNode.value = result.modelName;
-        showInlineFeedback(modelFeedback, result.message, "success");
-        return;
-      }
-      showInlineFeedback(modelFeedback, result.message || "Errore aggiunta modello.");
-    } catch (error) {
-      makeBtn.disabled = false;
-      modelBtn.disabled = false;
-      showInlineFeedback(modelFeedback, `Errore aggiunta modello: ${error?.message || String(error)}`);
+async function addModelFromDropdown({
+  makeSelectNode,
+  modelSelectNode,
+  vehicleTypeNode,
+}) {
+  if (!makeSelectNode.value || makeSelectNode.value === ADD_MAKE_VALUE) {
+    modelSelectNode.value = "";
+    showCatalogMessage("Seleziona prima una marca.");
+    return;
+  }
+  const inputModel = window.prompt("Inserisci il nuovo modello:");
+  if (inputModel === null) {
+    modelSelectNode.value = "";
+    return;
+  }
+  const role = roleForCatalogInline();
+  try {
+    const result = await addInlineModel({
+      makeName: makeSelectNode.value,
+      modelName: inputModel,
+      vehicleType: resolveInlineVehicleType(vehicleTypeNode.value),
+      role,
+    });
+    if (isStatusOk(result.status) || isStatusDuplicate(result.status)) {
+      await loadModels(makeSelectNode.value, modelSelectNode, { includeName: result.modelName });
+      modelSelectNode.value = result.modelName;
+      const msg = isStatusDuplicate(result.status)
+        ? "Modello gia presente: selezionato dal catalogo."
+        : "Modello aggiunto e selezionato.";
+      showCatalogMessage(msg, "success");
+      return;
     }
-  });
+    modelSelectNode.value = "";
+    showCatalogMessage(result.message || "Errore aggiunta modello.");
+  } catch (error) {
+    modelSelectNode.value = "";
+    showCatalogMessage(`Errore aggiunta modello: ${error?.message || String(error)}`);
+  }
 }
 
 function parseYear(value) {
@@ -238,25 +236,54 @@ customerSelect.addEventListener("change", () => {
 });
 
 vehicleTypeSelect.addEventListener("change", () => {
+  clearCatalogMessage();
   if (vehicleTypeSelect.value) {
     stepMake.style.display = "block";
     loadMakes(makeSelect);
+    stepModel.style.display = "none";
+    modelSelect.innerHTML = '<option value="">-- Seleziona modello --</option>';
   } else {
     stepMake.style.display = "none";
     stepModel.style.display = "none";
   }
 });
 
-makeSelect.addEventListener("change", () => {
+makeSelect.addEventListener("change", async () => {
+  if (makeSelect.value === ADD_MAKE_VALUE) {
+    await addMakeFromDropdown({
+      makeSelectNode: makeSelect,
+      modelSelectNode: modelSelect,
+      vehicleTypeNode: vehicleTypeSelect,
+      onAfterSelectMake: async (selectedMake) => {
+        stepModel.style.display = "block";
+        await loadModels(selectedMake, modelSelect);
+        modelSelect.value = "";
+        stepYear.style.display = "none";
+      },
+    });
+    return;
+  }
+  clearCatalogMessage();
   if (makeSelect.value) {
     stepModel.style.display = "block";
-    loadModels(makeSelect.value, modelSelect);
+    await loadModels(makeSelect.value, modelSelect);
+    modelSelect.value = "";
+    stepYear.style.display = "none";
   } else {
     stepModel.style.display = "none";
   }
 });
 
-modelSelect.addEventListener("change", () => {
+modelSelect.addEventListener("change", async () => {
+  if (modelSelect.value === ADD_MODEL_VALUE) {
+    await addModelFromDropdown({
+      makeSelectNode: makeSelect,
+      modelSelectNode: modelSelect,
+      vehicleTypeNode: vehicleTypeSelect,
+    });
+    return;
+  }
+  clearCatalogMessage();
   if (modelSelect.value) {
     stepYear.style.display = "block";
   } else {
@@ -513,6 +540,7 @@ export async function loadMakes(targetSelect) {
       makes.push(includeName);
     }
     if (makes.length === 0) {
+      addInlineOption(targetSelect, ADD_MAKE_VALUE, "+ Aggiungi marca");
       const msg = document.createElement("div");
       msg.id = MSG_ID;
       msg.style.color = "red";
@@ -529,6 +557,7 @@ export async function loadMakes(targetSelect) {
       opt.textContent = make;
       targetSelect.appendChild(opt);
     });
+    addInlineOption(targetSelect, ADD_MAKE_VALUE, "+ Aggiungi marca");
 
   } catch (err) {
     console.error("Errore caricamento marche:", err.message);
@@ -581,6 +610,7 @@ export async function loadModels(make, targetSelect) {
       models.push(includeName);
     }
     if (models.length === 0) {
+      addInlineOption(targetSelect, ADD_MODEL_VALUE, "+ Aggiungi modello");
       const msg = document.createElement("div");
       msg.id = MSG_ID;
       msg.style.color = "red";
@@ -597,16 +627,13 @@ export async function loadModels(make, targetSelect) {
       opt.textContent = model;
       targetSelect.appendChild(opt);
     });
+    addInlineOption(targetSelect, ADD_MODEL_VALUE, "+ Aggiungi modello");
 
   } catch (err) {
     console.warn("Errore caricamento modelli:", err.message);
   }
 
   // Niente inserimento manuale da questo form: catalogo gestito da Catalog Admin.
-}
-
-function normalizeOptionalName(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
 }
 
 // --- Popola la select degli anni ---
@@ -700,35 +727,9 @@ export async function handleVehicleFormSubmit(formNode, quickMode = false, optio
   }
 }
 
-export function initVehicleInlineCatalogControls() {
-  bindInlineCatalogActions({
-    root: document,
-    makeSelectNode: makeSelect,
-    modelSelectNode: modelSelect,
-    vehicleTypeNode: vehicleTypeSelect,
-    onModelRefresh: async (selectedMake) => {
-      if (!selectedMake) return;
-      await loadModels(selectedMake, modelSelect);
-      stepModel.style.display = "block";
-      stepYear.style.display = "none";
-    },
-  });
-}
-
-export function initScopedVehicleInlineCatalogControls({
-  root,
-  makeSelectNode,
-  modelSelectNode,
-  vehicleTypeNode,
-  onModelRefresh,
-}) {
-  bindInlineCatalogActions({
-    root,
-    makeSelectNode,
-    modelSelectNode,
-    vehicleTypeNode,
-    onModelRefresh,
-  });
-}
-
-initVehicleInlineCatalogControls();
+export {
+  ADD_MAKE_VALUE,
+  ADD_MODEL_VALUE,
+  addMakeFromDropdown,
+  addModelFromDropdown,
+};

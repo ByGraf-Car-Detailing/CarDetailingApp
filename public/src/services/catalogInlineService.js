@@ -81,7 +81,7 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
   const overrideQuery = query(collection(db, "vehicleMakeOverrides"), where("name", "==", brandName));
   const existingOverride = await getDocs(overrideQuery);
   if (!existingOverride.empty) {
-    return { status: "DUPLICATE", message: "Marca gia presente negli override.", makeId };
+    return { status: "DUPLICATE", message: "Marca gia presente negli override.", makeId, makeName: brandName };
   }
 
   const auditActor = actor || getActor();
@@ -133,14 +133,14 @@ async function addInlineModel({ makeName, modelName, vehicleType, actor, role })
     query(collection(db, "vehicleModels"), where("make", "==", safeMake), where("name", "==", safeModel))
   );
   if (!existingModels.empty) {
-    return { status: "DUPLICATE", message: "Modello gia presente per la marca selezionata.", modelId };
+    return { status: "DUPLICATE", message: "Modello gia presente per la marca selezionata.", modelId, modelName: safeModel };
   }
 
   const existingModelOverrides = await getDocs(
     query(collection(db, "vehicleModelOverrides"), where("make", "==", safeMake), where("name", "==", safeModel))
   );
   if (!existingModelOverrides.empty) {
-    return { status: "DUPLICATE", message: "Modello gia presente negli override.", modelId };
+    return { status: "DUPLICATE", message: "Modello gia presente negli override.", modelId, modelName: safeModel };
   }
 
   const auditActor = actor || getActor();

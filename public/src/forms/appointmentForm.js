@@ -1077,20 +1077,6 @@ async function renderStepVehicle() {
       if (cancelBtn) cancelBtn.textContent = "Annulla";
       const msgBox = formClone.querySelector("#vehicleFormMsg");
       if (msgBox) msgBox.textContent = "";
-      if (typeof module.initScopedVehicleInlineCatalogControls === "function") {
-        module.initScopedVehicleInlineCatalogControls({
-          root: formClone,
-          makeSelectNode: makeSelect,
-          modelSelectNode: modelSelect,
-          vehicleTypeNode: vehicleTypeSelect,
-          onModelRefresh: async (selectedMake) => {
-            if (!selectedMake) return;
-            if (module.loadModels) await module.loadModels(selectedMake, modelSelect);
-            stepModel.style.display = "block";
-            stepYear.style.display = "none";
-          },
-        });
-      }
 
       // === STANDARD: Formattazione telaio XXX XXX XXX ===
       function formatChassis(input) {
@@ -1130,6 +1116,20 @@ async function renderStepVehicle() {
       // === WIZARD: Marca -> Modello ===
       if (makeSelect) {
         makeSelect.addEventListener("change", async () => {
+          if (makeSelect.value === module.ADD_MAKE_VALUE) {
+            await module.addMakeFromDropdown({
+              makeSelectNode: makeSelect,
+              modelSelectNode: modelSelect,
+              vehicleTypeNode: vehicleTypeSelect,
+              onAfterSelectMake: async (selectedMake) => {
+                stepModel.style.display = "block";
+                if (module.loadModels) await module.loadModels(selectedMake, modelSelect);
+                modelSelect.value = "";
+                stepYear.style.display = "none";
+              },
+            });
+            return;
+          }
           if (makeSelect.value) {
             stepModel.style.display = "block";
             if (module.loadModels) await module.loadModels(makeSelect.value, modelSelect);
@@ -1154,7 +1154,15 @@ async function renderStepVehicle() {
       }
       
       // === WIZARD: Modello -> Anno ===
-      function checkModel() {
+      async function checkModel() {
+        if (modelSelect?.value === module.ADD_MODEL_VALUE) {
+          await module.addModelFromDropdown({
+            makeSelectNode: makeSelect,
+            modelSelectNode: modelSelect,
+            vehicleTypeNode: vehicleTypeSelect,
+          });
+          return;
+        }
         const modelValue = modelSelect?.value;
         if (modelValue) {
           stepYear.style.display = "block";

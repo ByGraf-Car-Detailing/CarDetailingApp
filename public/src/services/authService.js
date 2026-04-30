@@ -14,6 +14,11 @@ import { resolveOperatorDisplayName } from "./operatorIdentity.js";
 
 const provider = new GoogleAuthProvider();
 
+function isIndexedDbLifecycleWarning(error) {
+  const text = String(error?.message || error || "").toLowerCase();
+  return text.includes("indexeddb") && (text.includes("database connection is closing") || text.includes("connection is closing"));
+}
+
 async function checkAllowed(user) {
   const email = user?.email;
   if (!email) return null;
@@ -53,6 +58,11 @@ export async function loginWithGoogle() {
     const result = await signInWithPopup(auth, provider);
     return await checkAllowed(result.user);
   } catch (error) {
+    if (isIndexedDbLifecycleWarning(error)) {
+      console.warn("[auth] IndexedDB lifecycle warning during popup login (transient):", error?.message || error);
+      alert("Sessione browser in aggiornamento. Riprova il login.");
+      return null;
+    }
     console.error("? Errore login:", error?.message || error);
     alert("Errore durante il login");
     return null;

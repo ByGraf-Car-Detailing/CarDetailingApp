@@ -68,22 +68,29 @@ test("EB-020: inline add marca e modello nel form veicolo", async ({ page }) => 
   await page.selectOption("#customerSelect", customerValue || "");
   await page.selectOption("#vehicleTypeSelect", "Automobile");
   await expect(page.locator("#stepMake")).toBeVisible();
+  await expect(page.locator("#makeSelect option[value='__ADD_MAKE__']")).toHaveCount(1);
 
   const makeName = `InlineBrand${suffix}`;
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("prompt");
     await dialog.accept(makeName);
   });
-  await page.click("#inlineAddMakeBtn");
-  await expect(page.locator("#inlineMakeFeedback")).toContainText("successo", { timeout: 15000 });
+  await page.selectOption("#makeSelect", "__ADD_MAKE__");
+  await expect(page.locator("#vehicleFormMsg")).toContainText("selezionata", { timeout: 15000 });
   await expect(page.locator("#makeSelect")).toHaveValue(makeName);
+  await expect(page.locator("#modelSelect option[value='__ADD_MODEL__']")).toHaveCount(1);
 
   const modelName = `InlineModel${suffix}`;
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("prompt");
     await dialog.accept(modelName);
   });
-  await page.click("#inlineAddModelBtn");
-  await expect(page.locator("#inlineModelFeedback")).toContainText("successo", { timeout: 15000 });
+  await page.selectOption("#modelSelect", "__ADD_MODEL__");
+  await expect(page.locator("#vehicleFormMsg")).toContainText("selezionato", { timeout: 15000 });
   await expect(page.locator("#modelSelect")).toHaveValue(modelName);
+
+  // Duplicate flow must not trigger on plain vehicle-type changes; only on explicit add action.
+  await page.selectOption("#vehicleTypeSelect", "");
+  await page.selectOption("#vehicleTypeSelect", "Automobile");
+  await expect(page.locator("#vehicleFormMsg")).toHaveText("");
 });
