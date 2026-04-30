@@ -130,6 +130,7 @@ async function addModelFromDropdown({
   makeSelectNode,
   modelSelectNode,
   vehicleTypeNode,
+  onAfterSelectModel,
 }) {
   if (!makeSelectNode.value || makeSelectNode.value === ADD_MAKE_VALUE) {
     modelSelectNode.value = "";
@@ -152,6 +153,7 @@ async function addModelFromDropdown({
     if (isStatusOk(result.status) || isStatusDuplicate(result.status)) {
       await loadModels(makeSelectNode.value, modelSelectNode, { includeName: result.modelName });
       modelSelectNode.value = result.modelName;
+      if (typeof onAfterSelectModel === "function") await onAfterSelectModel(result.modelName);
       const msg = isStatusDuplicate(result.status)
         ? "Modello gia presente: selezionato dal catalogo."
         : "Modello aggiunto e selezionato.";
@@ -280,6 +282,9 @@ modelSelect.addEventListener("change", async () => {
       makeSelectNode: makeSelect,
       modelSelectNode: modelSelect,
       vehicleTypeNode: vehicleTypeSelect,
+      onAfterSelectModel: () => {
+        stepYear.style.display = "block";
+      },
     });
     return;
   }

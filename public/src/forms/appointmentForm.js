@@ -1160,6 +1160,10 @@ async function renderStepVehicle() {
             makeSelectNode: makeSelect,
             modelSelectNode: modelSelect,
             vehicleTypeNode: vehicleTypeSelect,
+            onAfterSelectModel: () => {
+              stepYear.style.display = "block";
+              if (module.loadYears) module.loadYears(yearSelect);
+            },
           });
           return;
         }

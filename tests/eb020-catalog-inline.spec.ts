@@ -88,6 +88,7 @@ test("EB-020: inline add marca e modello nel form veicolo", async ({ page }) => 
   await page.selectOption("#modelSelect", "__ADD_MODEL__");
   await expect(page.locator("#vehicleFormMsg")).toContainText("selezionato", { timeout: 15000 });
   await expect(page.locator("#modelSelect")).toHaveValue(modelName);
+  await expect(page.locator("#stepYear")).toBeVisible();
 
   // Duplicate flow must not trigger on plain vehicle-type changes; only on explicit add action.
   await page.selectOption("#vehicleTypeSelect", "");
