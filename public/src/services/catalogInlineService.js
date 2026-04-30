@@ -131,21 +131,26 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
     return { status: "COLLISION", message: "Marca gia presente nella baseline catalogo." };
   }
 
-  const overrideQuery = query(collection(db, "vehicleMakeOverrides"), where("name", "==", brandName));
-  const existingOverride = await getDocs(overrideQuery);
-  if (!existingOverride.empty) {
+  const overrideByIdRef = doc(db, "vehicleMakeOverrides", makeId);
+  const overrideByIdSnap = await getDoc(overrideByIdRef);
+  if (overrideByIdSnap.exists()) {
+    const existingData = overrideByIdSnap.data() || {};
+    const immutableStoredName = String(existingData.name || brandName);
+    const canonicalName = normalizeBrandName(immutableStoredName) || brandName;
     const auditActor = actor || getActor();
     logInlineTrace("override_make_reactivate_attempt", {
       collection: "vehicleMakeOverrides",
       docId: makeId,
-      role,
-      makeName: brandName,
+      role: authoritativeRole,
+      makeName: canonicalName,
+      legacyName: immutableStoredName,
     });
     try {
       await setDoc(
-        doc(db, "vehicleMakeOverrides", makeId),
+        overrideByIdRef,
         {
-          name: brandName,
+          // Keep legacy stored name immutable to satisfy existing Firestore update rule.
+          name: immutableStoredName,
           vehicleType: safeVehicleType,
           active: true,
           origin: "custom",
@@ -167,7 +172,7 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
       throw error;
     }
     try {
-      await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
+      await materializeMake({ makeId, makeName: canonicalName, vehicleType: safeVehicleType, actor: auditActor });
     } catch (error) {
       logInlineTrace("override_make_reactivate_fail", {
         collection: "vehicleMakes",
@@ -182,8 +187,14 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
       status: "DUPLICATE",
       message: "Marca gia presente negli override: riattivata e selezionata.",
       makeId,
-      makeName: brandName,
+      makeName: canonicalName,
     };
+  }
+
+  const overrideQuery = query(collection(db, "vehicleMakeOverrides"), where("name", "==", brandName));
+  const existingOverride = await getDocs(overrideQuery);
+  if (!existingOverride.empty) {
+    return { status: "DUPLICATE", message: "Marca gia presente negli override.", makeId, makeName: brandName };
   }
 
   const auditActor = actor || getActor();
