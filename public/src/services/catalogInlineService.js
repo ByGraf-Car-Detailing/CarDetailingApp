@@ -1,6 +1,8 @@
 import {
   collection,
+  deleteField,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -35,17 +37,28 @@ function getActor() {
 }
 
 async function materializeMake({ makeId, makeName, vehicleType, actor }) {
+  const makeRef = doc(db, "vehicleMakes", makeId);
+  const existing = await getDoc(makeRef);
   const payload = {
     name: makeName,
     active: true,
     source: "manual_override",
     origin: "custom",
+    policyVersion: "manual_override",
+    makeId: null,
+    makeIdCar: null,
+    makeIdMotorcycle: null,
+    nhtsaNameCar: null,
+    nhtsaNameMotorcycle: null,
+    deactivatedByPolicyVersion: deleteField(),
+    addedAt: existing.exists() ? (existing.data()?.addedAt ?? null) : serverTimestamp(),
     vehicleType: normalizeVehicleType(vehicleType),
     updatedAt: serverTimestamp(),
     updatedBy: actor.updatedBy,
     updatedByName: actor.updatedByName,
   };
-  await setDoc(doc(db, "vehicleMakes", makeId), payload, { merge: true });
+  if (payload.addedAt === null) delete payload.addedAt;
+  await setDoc(makeRef, payload, { merge: true });
 }
 
 async function materializeModel({ modelId, makeName, modelName, actor }) {

@@ -20,7 +20,7 @@
                     "test:emu":  "cross-env NODE_OPTIONS=--no-deprecation firebase emulators:exec --project staging --only auth,firestore,hosting \"node scripts/seed-emulators.mjs \u0026\u0026 npx playwright test\"",
                     "firebase:login:list": "cross-env NODE_OPTIONS=--no-deprecation firebase login:list",
                     "lint:quality": "node scripts/lint-quality.mjs",
-                    "test:unit": "vitest run tests/job-items.unit.test.mjs tests/catalog-inline.unit.test.mjs tests/catalog-sync-engine.unit.test.mjs",
+                    "test:unit": "vitest run tests/job-items.unit.test.mjs tests/catalog-inline.unit.test.mjs tests/catalog-sync-engine.unit.test.mjs tests/brand-normalization.unit.test.mjs",
                     "check:admin:operator-privacy": "node scripts/check-admin-operator-privacy.mjs",
                     "test:operator-audit-helper": "node --experimental-vm-modules scripts/test-operator-audit-helper.mjs",
                     "secrets:scan": "node scripts/scan-secrets.mjs",

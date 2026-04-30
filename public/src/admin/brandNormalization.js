@@ -1,5 +1,24 @@
 function normalizeBrandName(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
+  const compact = String(value || "").trim().replace(/\s+/g, " ");
+  if (!compact) return "";
+  const formatPart = (part) => {
+    const clean = String(part || "").trim();
+    if (!clean) return "";
+    const hasDigit = /\d/.test(clean);
+    if (hasDigit || clean.length <= 3) return clean.toUpperCase();
+    return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  };
+  return compact
+    .split(" ")
+    .map((token) =>
+      token
+        .split("-")
+        .map((part) => formatPart(part))
+        .filter(Boolean)
+        .join("-")
+    )
+    .filter(Boolean)
+    .join(" ");
 }
 
 function normalizeBrandKey(value) {
