@@ -1,8 +1,8 @@
 import {
+  getDoc,
   collection,
   deleteField,
   doc,
-  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -20,7 +20,6 @@ import {
   normalizeOverrideId,
 } from "../admin/catalogSyncRunner.js";
 import {
-  isAuthorizedRole,
   normalizeModelKey,
   normalizeModelName,
   normalizeVehicleType,
@@ -34,6 +33,18 @@ function getActor() {
     sessionDisplayName: resolveSessionOperatorName(),
     authDisplayName: auth.currentUser?.displayName || "",
   });
+}
+
+async function resolveAuthoritativeRole(fallbackRole = "") {
+  const email = auth.currentUser?.email || "";
+  if (!email) return String(fallbackRole || "").trim().toLowerCase();
+  try {
+    const snap = await getDoc(doc(db, "allowedUsers", email));
+    const role = snap.exists() ? String(snap.data()?.role || "").trim().toLowerCase() : "";
+    return role || String(fallbackRole || "").trim().toLowerCase();
+  } catch {
+    return String(fallbackRole || "").trim().toLowerCase();
+  }
 }
 
 function logInlineTrace(event, details = {}) {
@@ -101,7 +112,9 @@ async function materializeModel({ modelId, makeName, modelName, actor }) {
 }
 
 async function addInlineMake({ name, vehicleType, actor, role }) {
-  if (!isAuthorizedRole(role)) {
+  const authoritativeRole = await resolveAuthoritativeRole(role);
+  logInlineTrace("role_resolution", { requestedRole: role || null, authoritativeRole: authoritativeRole || null });
+  if (authoritativeRole !== "admin") {
     return { status: "UNAUTHORIZED", message: "Operazione non autorizzata." };
   }
 
@@ -128,20 +141,31 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
       role,
       makeName: brandName,
     });
-    await setDoc(
-      doc(db, "vehicleMakeOverrides", makeId),
-      {
-        name: brandName,
-        vehicleType: safeVehicleType,
-        active: true,
-        origin: "custom",
-        source: "manual_override",
-        updatedAt: serverTimestamp(),
-        updatedBy: auditActor.updatedBy,
-        updatedByName: auditActor.updatedByName,
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        doc(db, "vehicleMakeOverrides", makeId),
+        {
+          name: brandName,
+          vehicleType: safeVehicleType,
+          active: true,
+          origin: "custom",
+          source: "manual_override",
+          updatedAt: serverTimestamp(),
+          updatedBy: auditActor.updatedBy,
+          updatedByName: auditActor.updatedByName,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      logInlineTrace("override_make_reactivate_override_write_fail", {
+        collection: "vehicleMakeOverrides",
+        docId: makeId,
+        role: authoritativeRole,
+        code: error?.code || null,
+        message: error?.message || String(error),
+      });
+      throw error;
+    }
     try {
       await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
     } catch (error) {
@@ -184,7 +208,18 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
     makeName: brandName,
     payloadKeys: Object.keys(overridePayload),
   });
-  await setDoc(doc(db, "vehicleMakeOverrides", makeId), overridePayload, { merge: true });
+  try {
+    await setDoc(doc(db, "vehicleMakeOverrides", makeId), overridePayload, { merge: true });
+  } catch (error) {
+    logInlineTrace("override_make_create_fail", {
+      collection: "vehicleMakeOverrides",
+      docId: makeId,
+      role: authoritativeRole,
+      code: error?.code || null,
+      message: error?.message || String(error),
+    });
+    throw error;
+  }
   try {
     await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
   } catch (error) {
@@ -207,7 +242,9 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
 }
 
 async function addInlineModel({ makeName, modelName, vehicleType, actor, role }) {
-  if (!isAuthorizedRole(role)) {
+  const authoritativeRole = await resolveAuthoritativeRole(role);
+  logInlineTrace("role_resolution", { requestedRole: role || null, authoritativeRole: authoritativeRole || null });
+  if (authoritativeRole !== "admin") {
     return { status: "UNAUTHORIZED", message: "Operazione non autorizzata." };
   }
 
@@ -260,7 +297,18 @@ async function addInlineModel({ makeName, modelName, vehicleType, actor, role })
     modelName: safeModel,
     payloadKeys: Object.keys(overridePayload),
   });
-  await setDoc(doc(db, "vehicleModelOverrides", modelId), overridePayload, { merge: true });
+  try {
+    await setDoc(doc(db, "vehicleModelOverrides", modelId), overridePayload, { merge: true });
+  } catch (error) {
+    logInlineTrace("override_model_create_fail", {
+      collection: "vehicleModelOverrides",
+      docId: modelId,
+      role: authoritativeRole,
+      code: error?.code || null,
+      message: error?.message || String(error),
+    });
+    throw error;
+  }
 
   try {
     await materializeModel({ modelId, makeName: safeMake, modelName: safeModel, actor: auditActor });
