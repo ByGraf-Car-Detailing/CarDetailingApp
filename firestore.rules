@@ -69,6 +69,59 @@ service cloud.firestore {
       ]);
     }
 
+    function hasOnlyInlineMakeMaterializedFields() {
+      return request.resource.data.keys().hasOnly([
+        "name",
+        "active",
+        "source",
+        "origin",
+        "vehicleType",
+        "addedAt",
+        "updatedAt",
+        "updatedBy",
+        "updatedByName",
+        "policyVersion",
+        "makeId",
+        "makeIdCar",
+        "makeIdMotorcycle",
+        "nhtsaNameCar",
+        "nhtsaNameMotorcycle",
+        "deactivatedByPolicyVersion",
+      ]);
+    }
+
+    function isStaffInlineMakeWrite() {
+      return isStaff()
+        && hasOnlyInlineMakeMaterializedFields()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.active is bool
+        && request.resource.data.source == "manual_override"
+        && request.resource.data.origin == "custom"
+        && isValidVehicleType(request.resource.data.vehicleType);
+    }
+
+    function hasOnlyInlineModelMaterializedFields() {
+      return request.resource.data.keys().hasOnly([
+        "make",
+        "name",
+        "source",
+        "updatedAt",
+        "updatedBy",
+        "updatedByName",
+      ]);
+    }
+
+    function isStaffInlineModelWrite() {
+      return isStaff()
+        && hasOnlyInlineModelMaterializedFields()
+        && request.resource.data.make is string
+        && request.resource.data.make.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.source in ["manual", "manual_override"];
+    }
+
     function isOwnerCreated() {
       return isAllowed() && resource.data.createdBy == request.auth.token.email;
     }
@@ -112,12 +165,14 @@ service cloud.firestore {
 
     match /vehicleMakes/{id} {
       allow read: if isAllowedRole();
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() || isStaffInlineMakeWrite();
+      allow delete: if isAdmin();
     }
 
     match /vehicleModels/{id} {
       allow read: if isAllowedRole();
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() || isStaffInlineModelWrite();
+      allow delete: if isAdmin();
     }
 
     // Admin UI overrides: write allowed only to admins.
