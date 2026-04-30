@@ -36,6 +36,21 @@ function getActor() {
   });
 }
 
+function logInlineTrace(event, details = {}) {
+  try {
+    const payload = {
+      event,
+      at: new Date().toISOString(),
+      authEmail: auth.currentUser?.email || null,
+      authUid: auth.currentUser?.uid || null,
+      ...details,
+    };
+    console.info("[catalog-inline-trace]", payload);
+  } catch {
+    // no-op
+  }
+}
+
 async function materializeMake({ makeId, makeName, vehicleType, actor }) {
   const makeRef = doc(db, "vehicleMakes", makeId);
   const existing = await getDoc(makeRef);
@@ -58,7 +73,13 @@ async function materializeMake({ makeId, makeName, vehicleType, actor }) {
     updatedByName: actor.updatedByName,
   };
   if (payload.addedAt === null) delete payload.addedAt;
+  logInlineTrace("materialize_make_attempt", {
+    collection: "vehicleMakes",
+    docId: makeId,
+    payloadKeys: Object.keys(payload),
+  });
   await setDoc(makeRef, payload, { merge: true });
+  logInlineTrace("materialize_make_success", { collection: "vehicleMakes", docId: makeId });
 }
 
 async function materializeModel({ modelId, makeName, modelName, actor }) {
@@ -70,7 +91,13 @@ async function materializeModel({ modelId, makeName, modelName, actor }) {
     updatedBy: actor.updatedBy,
     updatedByName: actor.updatedByName,
   };
+  logInlineTrace("materialize_model_attempt", {
+    collection: "vehicleModels",
+    docId: modelId,
+    payloadKeys: Object.keys(payload),
+  });
   await setDoc(doc(db, "vehicleModels", modelId), payload, { merge: true });
+  logInlineTrace("materialize_model_success", { collection: "vehicleModels", docId: modelId });
 }
 
 async function addInlineMake({ name, vehicleType, actor, role }) {
@@ -95,6 +122,12 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
   const existingOverride = await getDocs(overrideQuery);
   if (!existingOverride.empty) {
     const auditActor = actor || getActor();
+    logInlineTrace("override_make_reactivate_attempt", {
+      collection: "vehicleMakeOverrides",
+      docId: makeId,
+      role,
+      makeName: brandName,
+    });
     await setDoc(
       doc(db, "vehicleMakeOverrides", makeId),
       {
@@ -109,7 +142,18 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
       },
       { merge: true }
     );
-    await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
+    try {
+      await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
+    } catch (error) {
+      logInlineTrace("override_make_reactivate_fail", {
+        collection: "vehicleMakes",
+        docId: makeId,
+        role,
+        code: error?.code || null,
+        message: error?.message || String(error),
+      });
+      throw error;
+    }
     return {
       status: "DUPLICATE",
       message: "Marca gia presente negli override: riattivata e selezionata.",
@@ -133,10 +177,24 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
     updatedByName: auditActor.updatedByName,
   };
 
+  logInlineTrace("override_make_create_attempt", {
+    collection: "vehicleMakeOverrides",
+    docId: makeId,
+    role,
+    makeName: brandName,
+    payloadKeys: Object.keys(overridePayload),
+  });
   await setDoc(doc(db, "vehicleMakeOverrides", makeId), overridePayload, { merge: true });
   try {
     await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
   } catch (error) {
+    logInlineTrace("materialize_make_fail", {
+      collection: "vehicleMakes",
+      docId: makeId,
+      role,
+      code: error?.code || null,
+      message: error?.message || String(error),
+    });
     return {
       status: "MATERIALIZE_FAIL",
       message: "Marca salvata negli override, ma non materializzata nel catalogo.",
@@ -194,11 +252,26 @@ async function addInlineModel({ makeName, modelName, vehicleType, actor, role })
     updatedBy: auditActor.updatedBy,
     updatedByName: auditActor.updatedByName,
   };
+  logInlineTrace("override_model_create_attempt", {
+    collection: "vehicleModelOverrides",
+    docId: modelId,
+    role,
+    makeName: safeMake,
+    modelName: safeModel,
+    payloadKeys: Object.keys(overridePayload),
+  });
   await setDoc(doc(db, "vehicleModelOverrides", modelId), overridePayload, { merge: true });
 
   try {
     await materializeModel({ modelId, makeName: safeMake, modelName: safeModel, actor: auditActor });
   } catch (error) {
+    logInlineTrace("materialize_model_fail", {
+      collection: "vehicleModels",
+      docId: modelId,
+      role,
+      code: error?.code || null,
+      message: error?.message || String(error),
+    });
     return {
       status: "MATERIALIZE_FAIL",
       message: "Modello salvato negli override, ma non materializzato nel catalogo.",

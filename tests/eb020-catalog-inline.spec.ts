@@ -71,13 +71,14 @@ test("EB-020: inline add marca e modello nel form veicolo", async ({ page }) => 
   await expect(page.locator("#makeSelect option[value='__ADD_MAKE__']")).toHaveCount(1);
 
   const makeName = `InlineBrand${suffix}`;
+  const expectedMakeName = makeName.toUpperCase();
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("prompt");
     await dialog.accept(makeName);
   });
   await page.selectOption("#makeSelect", "__ADD_MAKE__");
   await expect(page.locator("#vehicleFormMsg")).toContainText("selezionata", { timeout: 15000 });
-  await expect(page.locator("#makeSelect")).toHaveValue(makeName);
+  await expect(page.locator("#makeSelect")).toHaveValue(expectedMakeName);
   await expect(page.locator("#modelSelect option[value='__ADD_MODEL__']")).toHaveCount(1);
 
   const modelName = `InlineModel${suffix}`;
@@ -94,4 +95,63 @@ test("EB-020: inline add marca e modello nel form veicolo", async ({ page }) => 
   await page.selectOption("#vehicleTypeSelect", "");
   await page.selectOption("#vehicleTypeSelect", "Automobile");
   await expect(page.locator("#vehicleFormMsg")).toHaveText("");
+});
+
+test("EB-020: duplicate make custom disattivata viene riattivata e selezionata", async ({ page }) => {
+  const suffix = Date.now().toString().slice(-6);
+  await loginAdmin(page);
+  await seedClientAndCatalog(page, suffix);
+
+  const makeName = "DR";
+  await page.evaluate(async ({ makeName }) => {
+    const fs = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");
+    const svc = await import("/src/services/authService.js");
+    const db = svc.db;
+    await fs.setDoc(fs.doc(db, "vehicleMakeOverrides", "DR"), {
+      name: makeName,
+      vehicleType: "car",
+      active: true,
+      origin: "custom",
+      source: "manual_override",
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    await fs.setDoc(fs.doc(db, "vehicleMakes", "DR"), {
+      name: "dr",
+      active: false,
+      deactivatedByPolicyVersion: "2026.04-major-v2",
+      origin: "custom",
+      source: "manual_override",
+      vehicleType: "car",
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  }, { makeName });
+
+  await page.getByTestId("dash-gestione-veicoli").click();
+  await page.click("#showAddVehicleBtn");
+
+  const customerValue = await page
+    .locator("#customerSelect option")
+    .filter({ hasText: `EB020_${suffix}` })
+    .first()
+    .getAttribute("value");
+  expect(customerValue).toBeTruthy();
+  await page.selectOption("#customerSelect", customerValue || "");
+  await page.selectOption("#vehicleTypeSelect", "Automobile");
+
+  page.once("dialog", async (dialog) => {
+    await dialog.accept("dr");
+  });
+  await page.selectOption("#makeSelect", "__ADD_MAKE__");
+  await expect(page.locator("#makeSelect")).toHaveValue(makeName);
+  await expect(page.locator("#vehicleFormMsg")).toContainText("selezionata", { timeout: 15000 });
+
+  const stored = await page.evaluate(async () => {
+    const fs = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");
+    const svc = await import("/src/services/authService.js");
+    const snap = await fs.getDoc(fs.doc(svc.db, "vehicleMakes", "DR"));
+    return snap.data();
+  });
+  expect(stored?.active).toBe(true);
+  expect(stored?.name).toBe("DR");
+  expect(stored?.deactivatedByPolicyVersion ?? null).toBeNull();
 });
