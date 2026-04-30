@@ -549,13 +549,30 @@ export async function loadMakes(targetSelect) {
 
   try {
     // Legge solo marche active da Firestore
-    const q = query(collection(db, "vehicleMakes"), where("active", "==", true));
-    const snap = await getDocs(q);
-    
+    const [makesSnap, activeOverridesSnap] = await Promise.all([
+      getDocs(query(collection(db, "vehicleMakes"), where("active", "==", true))),
+      getDocs(query(collection(db, "vehicleMakeOverrides"), where("active", "==", true))),
+    ]);
+    const activeOverrideIds = new Set();
+    activeOverridesSnap.forEach((docSnap) => {
+      const data = docSnap.data() || {};
+      const byId = normalizeLookupKey(docSnap.id || "");
+      const byName = normalizeLookupKey(data.name || "");
+      if (byId) activeOverrideIds.add(byId);
+      if (byName) activeOverrideIds.add(byName);
+    });
+
     const makes = [];
-    snap.forEach(doc => {
-      const name = doc.data().name;
-      if (name) makes.push(name);
+    makesSnap.forEach((docSnap) => {
+      const data = docSnap.data() || {};
+      const name = normalizeOptionalName(data.name);
+      if (!name) return;
+      const isCustom = data.source === "manual_override" || data.origin === "custom";
+      if (isCustom) {
+        const customId = normalizeLookupKey(docSnap.id || name);
+        if (!activeOverrideIds.has(customId)) return;
+      }
+      makes.push(name);
     });
     
     // Ordina alfabeticamente
@@ -630,6 +647,19 @@ export async function loadModels(make, targetSelect) {
       ? getDocs(query(collection(db, "vehicleModels"), where("makeId", "==", makeIdKey)))
       : null;
     const queryResults = await Promise.all(makeIdQuery ? [...makeQueries, makeIdQuery] : makeQueries);
+    const [activeModelOverridesRaw, makeByIdSnap] = await Promise.all([
+      Promise.all(variants.map((v) => getDocs(query(collection(db, "vehicleModelOverrides"), where("make", "==", v))))),
+      getDoc(doc(db, "vehicleMakes", makeIdKey)),
+    ]);
+    const activeModelOverrideIds = new Set();
+    for (const snap of activeModelOverridesRaw) {
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        if (data.active !== false) activeModelOverrideIds.add(normalizeLookupKey(docSnap.id || ""));
+      });
+    }
+    const makeRow = makeByIdSnap.exists() ? (makeByIdSnap.data() || {}) : {};
+    const selectedMakeIsCustom = makeRow.source === "manual_override" || makeRow.origin === "custom";
 
     for (const snap of queryResults) {
       snap.forEach((docSnap) => {
@@ -638,6 +668,10 @@ export async function loadModels(make, targetSelect) {
         const row = docSnap.data() || {};
         const name = normalizeOptionalName(row.name);
         if (!name) return;
+        if (selectedMakeIsCustom) {
+          const modelKey = normalizeLookupKey(`${make}_${name}`);
+          if (!activeModelOverrideIds.has(modelKey)) return;
+        }
         const modelKey = name.toLowerCase();
         if (!byModelName.has(modelKey)) byModelName.set(modelKey, name);
       });

@@ -130,6 +130,17 @@ test("EB-020: duplicate make custom disattivata viene riattivata e selezionata",
       source: "manual",
       updatedAt: new Date().toISOString(),
     }, { merge: true });
+    await fs.setDoc(fs.doc(db, "vehicleModelOverrides", "DR_5_0"), {
+      make: "DR",
+      makeId: "DR",
+      name: "5.0",
+      modelId: "DR_5_0",
+      vehicleType: "car",
+      active: true,
+      origin: "custom",
+      source: "manual_override",
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
   }, { makeName });
 
   await page.getByTestId("dash-gestione-veicoli").click();
@@ -162,4 +173,38 @@ test("EB-020: duplicate make custom disattivata viene riattivata e selezionata",
   expect(stored?.active).toBe(true);
   expect(stored?.name).toBe("DR");
   expect(stored?.deactivatedByPolicyVersion ?? null).toBeNull();
+});
+
+test("EB-020: make custom orfana (senza override attivo) non appare in tendina", async ({ page }) => {
+  const suffix = Date.now().toString().slice(-6);
+  await loginAdmin(page);
+  await seedClientAndCatalog(page, suffix);
+
+  await page.evaluate(async () => {
+    const fs = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");
+    const svc = await import("/src/services/authService.js");
+    const db = svc.db;
+    await fs.setDoc(fs.doc(db, "vehicleMakes", "DR"), {
+      name: "DR",
+      active: true,
+      origin: "custom",
+      source: "manual_override",
+      vehicleType: "car",
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    // Simula cancellazione override: nessun vehicleMakeOverrides/DR presente.
+    await fs.deleteDoc(fs.doc(db, "vehicleMakeOverrides", "DR"));
+  });
+
+  await page.getByTestId("dash-gestione-veicoli").click();
+  await page.click("#showAddVehicleBtn");
+  const customerValue = await page
+    .locator("#customerSelect option")
+    .filter({ hasText: `EB020_${suffix}` })
+    .first()
+    .getAttribute("value");
+  expect(customerValue).toBeTruthy();
+  await page.selectOption("#customerSelect", customerValue || "");
+  await page.selectOption("#vehicleTypeSelect", "Automobile");
+  await expect(page.locator("#makeSelect option").filter({ hasText: "DR" })).toHaveCount(0);
 });
