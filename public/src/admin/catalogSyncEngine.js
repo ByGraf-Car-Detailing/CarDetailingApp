@@ -111,6 +111,11 @@ function planMajorMakesUpserts(existingMakesById, selectedMajorMakes, policyVers
   for (const [docId, data] of existingMakesById.entries()) {
     if (selectedIds.has(docId)) continue;
     if (data?.active !== true) continue;
+    // Preserve manual/custom makes: policy sync may deactivate only baseline policy-managed makes.
+    const source = String(data?.source || "").trim().toLowerCase();
+    const origin = String(data?.origin || "").trim().toLowerCase();
+    const isCustomManual = source === "manual_override" || origin === "custom";
+    if (isCustomManual) continue;
     operations.push({
       collection: "vehicleMakes",
       docId,

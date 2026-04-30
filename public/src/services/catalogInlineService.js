@@ -81,7 +81,28 @@ async function addInlineMake({ name, vehicleType, actor, role }) {
   const overrideQuery = query(collection(db, "vehicleMakeOverrides"), where("name", "==", brandName));
   const existingOverride = await getDocs(overrideQuery);
   if (!existingOverride.empty) {
-    return { status: "DUPLICATE", message: "Marca gia presente negli override.", makeId, makeName: brandName };
+    const auditActor = actor || getActor();
+    await setDoc(
+      doc(db, "vehicleMakeOverrides", makeId),
+      {
+        name: brandName,
+        vehicleType: safeVehicleType,
+        active: true,
+        origin: "custom",
+        source: "manual_override",
+        updatedAt: serverTimestamp(),
+        updatedBy: auditActor.updatedBy,
+        updatedByName: auditActor.updatedByName,
+      },
+      { merge: true }
+    );
+    await materializeMake({ makeId, makeName: brandName, vehicleType: safeVehicleType, actor: auditActor });
+    return {
+      status: "DUPLICATE",
+      message: "Marca gia presente negli override: riattivata e selezionata.",
+      makeId,
+      makeName: brandName,
+    };
   }
 
   const auditActor = actor || getActor();
