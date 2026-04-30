@@ -647,19 +647,13 @@ export async function loadModels(make, targetSelect) {
       ? getDocs(query(collection(db, "vehicleModels"), where("makeId", "==", makeIdKey)))
       : null;
     const queryResults = await Promise.all(makeIdQuery ? [...makeQueries, makeIdQuery] : makeQueries);
-    const [activeModelOverridesRaw, makeByIdSnap] = await Promise.all([
-      Promise.all(variants.map((v) => getDocs(query(collection(db, "vehicleModelOverrides"), where("make", "==", v))))),
+    const [activeMakeOverridesSnap, makeByIdSnap] = await Promise.all([
+      Promise.all(variants.map((v) => getDocs(query(collection(db, "vehicleMakeOverrides"), where("name", "==", v), where("active", "==", true))))),
       getDoc(doc(db, "vehicleMakes", makeIdKey)),
     ]);
-    const activeModelOverrideIds = new Set();
-    for (const snap of activeModelOverridesRaw) {
-      snap.forEach((docSnap) => {
-        const data = docSnap.data() || {};
-        if (data.active !== false) activeModelOverrideIds.add(normalizeLookupKey(docSnap.id || ""));
-      });
-    }
     const makeRow = makeByIdSnap.exists() ? (makeByIdSnap.data() || {}) : {};
     const selectedMakeIsCustom = makeRow.source === "manual_override" || makeRow.origin === "custom";
+    const selectedMakeHasActiveOverride = activeMakeOverridesSnap.some((snap) => !snap.empty);
 
     for (const snap of queryResults) {
       snap.forEach((docSnap) => {
@@ -669,8 +663,7 @@ export async function loadModels(make, targetSelect) {
         const name = normalizeOptionalName(row.name);
         if (!name) return;
         if (selectedMakeIsCustom) {
-          const modelKey = normalizeLookupKey(`${make}_${name}`);
-          if (!activeModelOverrideIds.has(modelKey)) return;
+          if (!selectedMakeHasActiveOverride) return;
         }
         const modelKey = name.toLowerCase();
         if (!byModelName.has(modelKey)) byModelName.set(modelKey, name);
