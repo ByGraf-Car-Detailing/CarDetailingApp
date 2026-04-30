@@ -1077,6 +1077,20 @@ async function renderStepVehicle() {
       if (cancelBtn) cancelBtn.textContent = "Annulla";
       const msgBox = formClone.querySelector("#vehicleFormMsg");
       if (msgBox) msgBox.textContent = "";
+      if (typeof module.initScopedVehicleInlineCatalogControls === "function") {
+        module.initScopedVehicleInlineCatalogControls({
+          root: formClone,
+          makeSelectNode: makeSelect,
+          modelSelectNode: modelSelect,
+          vehicleTypeNode: vehicleTypeSelect,
+          onModelRefresh: async (selectedMake) => {
+            if (!selectedMake) return;
+            if (module.loadModels) await module.loadModels(selectedMake, modelSelect);
+            stepModel.style.display = "block";
+            stepYear.style.display = "none";
+          },
+        });
+      }
 
       // === STANDARD: Formattazione telaio XXX XXX XXX ===
       function formatChassis(input) {

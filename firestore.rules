@@ -43,8 +43,29 @@ service cloud.firestore {
         "source",
         "createdAt",
         "createdBy",
+        "createdByName",
         "updatedAt",
         "updatedBy",
+        "updatedByName",
+      ]);
+    }
+
+    function hasOnlyModelOverrideFields() {
+      return request.resource.data.keys().hasOnly([
+        "make",
+        "makeId",
+        "name",
+        "modelId",
+        "vehicleType",
+        "active",
+        "origin",
+        "source",
+        "createdAt",
+        "createdBy",
+        "createdByName",
+        "updatedAt",
+        "updatedBy",
+        "updatedByName",
       ]);
     }
 
@@ -124,7 +145,23 @@ service cloud.firestore {
 
     match /vehicleModelOverrides/{id} {
       allow read: if isAllowedRole();
-      allow create, update, delete: if false;
+      allow create: if isAdmin()
+        && hasOnlyModelOverrideFields()
+        && request.resource.data.make is string
+        && request.resource.data.make.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.active is bool
+        && request.resource.data.origin == "custom"
+        && isValidVehicleType(request.resource.data.vehicleType);
+      allow update: if isAdmin()
+        && hasOnlyModelOverrideFields()
+        && resource.data.make == request.resource.data.make
+        && resource.data.name == request.resource.data.name
+        && request.resource.data.origin == "custom"
+        && request.resource.data.active is bool
+        && isValidVehicleType(request.resource.data.vehicleType);
+      allow delete: if isAdmin();
     }
 
     match /jobTypeOverrides/{id} {
